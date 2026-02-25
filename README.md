@@ -1,6 +1,6 @@
 # AI Focus Planner
 
-> Intelligent task management that schedules your day — not just lists it.
+> Intelligent task management that schedules your day - not just lists it.
 
 ![AI Focus Planner Screenshot](./public/screenshot.png)
 <!-- Replace with your actual screenshot -->
@@ -11,7 +11,7 @@
 
 ## What it does
 
-AI Focus Planner is a task management app that goes one step further than a to-do list. You add your tasks with time estimates and deadlines, then hit **"Optimize my day"** — the app calls GPT-4o-mini, which analyzes your workload and returns a concrete time-blocked schedule starting from the current moment.
+AI Focus Planner is a task management app that goes one step further than a to-do list. You add your tasks with time estimates and deadlines, then hit **"Optimize my day"** - the app calls GPT-4o-mini, which analyzes your workload and returns a concrete time-blocked schedule starting from the current moment.
 
 You can accept the AI plan (tasks reorder and display their assigned time slots) or discard it and keep your original list. Completed tasks move to a separate "Past & Completed" view so your active queue stays clean.
 
@@ -34,7 +34,7 @@ You can accept the AI plan (tasks reorder and display their assigned time slots)
 
 | Tool | How I used it |
 |------|--------------|
-| **Claude (Anthropic)** | Primary development assistant — component architecture, business logic, prompt engineering, bug fixing |
+| **Claude (Anthropic)** | Primary development assistant - component architecture, business logic, prompt engineering, bug fixing |
 | **Claude Code** | In-editor assistant for refactoring and iterative fixes |
 | **OpenAI GPT-4o-mini** | The AI model that runs inside the app to generate daily schedules |
 
@@ -42,14 +42,14 @@ You can accept the AI plan (tasks reorder and display their assigned time slots)
 
 ## The Hallucination Problem
 
-**The issue:** GPT-4o-mini was supposed to return pure JSON, but roughly 30% of responses came back wrapped in markdown code fences (` ```json `) or with a sentence of explanation before the JSON object. This caused `JSON.parse()` to throw and the whole optimization flow to fail silently.
+**The issue:** GPT-4o-mini was expected to return pure JSON; however, in a significant number of cases, responses were wrapped in markdown code fences (` ```json `) or prefixed with explanatory text. This caused `JSON.parse()` to throw, breaking the optimization flow.
 
 **How I solved it — in three steps:**
 
 **1. Prompt engineering first.** I made the system prompt explicit and repeated:
 
 ```
-You must respond ONLY with valid JSON — no explanation, no markdown, no extra text.
+You must respond ONLY with valid JSON - no explanation, no markdown, no extra text.
 ```
 
 This alone dropped the failure rate significantly, but not to zero.
@@ -75,7 +75,7 @@ if (!parsed?.ordered_task_ids || !parsed?.slots || !parsed?.rationale) {
 }
 ```
 
-The key insight was treating LLM output like any untrusted external API — parse defensively, validate the shape, and fail gracefully with a user-friendly message rather than a silent crash.
+The key insight was treating LLM output like any untrusted external API - parse defensively, validate the shape, and fail gracefully with a user-friendly message rather than a silent crash.
 
 ---
 
@@ -114,7 +114,7 @@ create policy "Users can only access their own tasks"
   on tasks for all using (auth.uid() = user_id);
 ```
 
-**4. Set environment variables** — copy `.env.example` to `.env`:
+**4. Set environment variables** - copy `.env.example` to `.env`:
 
 ```env
 VITE_SUPABASE_URL=your_supabase_url
@@ -136,7 +136,7 @@ npm run dev
 ```
 ai-focus-planner/
 ├── api/
-│   └── optimize.ts          # Vercel serverless function — AI scheduling
+│   └── optimize.ts          # Vercel serverless function - AI scheduling
 ├── src/
 │   ├── components/
 │   │   ├── Auth.tsx          # Login / register / landing page
