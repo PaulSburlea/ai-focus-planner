@@ -107,7 +107,7 @@ export default function TaskForm({ onTaskAdded }: Props) {
             required
           />
           {estimate && (
-            <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 5, fontFamily: 'Fira Code, monospace' }}>
+            <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 5, fontFamily: 'DM Mono, monospace' }}>
               = {formatMinutes(parseInt(estimate) || 0)}
             </p>
           )}

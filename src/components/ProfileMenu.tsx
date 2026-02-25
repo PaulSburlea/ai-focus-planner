@@ -38,7 +38,7 @@ export default function ProfileMenu({ session, tasks, onSignOut }: Props) {
           background: open ? 'var(--accent)' : 'var(--surface-2)',
           border: `1px solid ${open ? 'var(--accent)' : 'var(--border)'}`,
           color: open ? 'var(--accent-fg)' : 'var(--text)',
-          fontFamily: 'Fira Code, monospace',
+          fontFamily: 'DM Mono, monospace',
           fontSize: 11, fontWeight: 700,
           cursor: 'pointer', display: 'flex',
           alignItems: 'center', justifyContent: 'center',
@@ -70,7 +70,7 @@ export default function ProfileMenu({ session, tasks, onSignOut }: Props) {
                 width: 36, height: 36, borderRadius: 10,
                 background: 'var(--accent-dim)', border: '1px solid var(--accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'Fira Code, monospace', fontSize: 13,
+                fontFamily: 'DM Mono, monospace', fontSize: 13,
                 fontWeight: 700, color: 'var(--accent)', flexShrink: 0
               }}>
                 {initials}
@@ -96,14 +96,14 @@ export default function ProfileMenu({ session, tasks, onSignOut }: Props) {
                   background: 'var(--surface-2)', borderRadius: 8,
                   padding: '8px 6px', textAlign: 'center'
                 }}>
-                  <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent)', fontFamily: 'Fira Code, monospace', lineHeight: 1 }}>{s.value}</p>
+                  <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent)', fontFamily: 'DM Mono, monospace', lineHeight: 1 }}>{s.value}</p>
                   <p style={{ fontSize: 9, color: 'var(--text-3)', marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{s.label}</p>
                 </div>
               ))}
             </div>
             <div style={{ marginTop: 8, background: 'var(--surface-2)', borderRadius: 8, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 11, color: 'var(--text-2)' }}>Total time tracked</span>
-              <span style={{ fontSize: 12, fontFamily: 'Fira Code, monospace', color: 'var(--text)', fontWeight: 600 }}>
+              <span style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', color: 'var(--text)', fontWeight: 600 }}>
                 {Math.floor(totalMinutes / 60)}h {totalMinutes % 60}m
               </span>
             </div>

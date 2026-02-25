@@ -180,7 +180,7 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 13, width: 18, textAlign: 'center', opacity: 0.5 }}>⏱</span>
                   <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Duration</span>
-                  <span style={{ marginLeft: 'auto', fontFamily: 'Fira Code, monospace', fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>
+                  <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>
                     {formatMinutes(task.estimate_minutes)}
                   </span>
                 </div>
@@ -195,7 +195,7 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
                           {dl.tag.toUpperCase()}
                         </span>
                       )}
-                      <span style={{ fontFamily: 'Fira Code, monospace', fontSize: 12, color: dl.color }}>{dl.str}</span>
+                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: dl.color }}>{dl.str}</span>
                     </div>
                   </div>
                 )}
@@ -229,7 +229,7 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
                     width: '100%', padding: 11,
                     background: '#16a34a', color: '#fff',
                     border: 'none', borderRadius: 10,
-                    fontFamily: 'Plus Jakarta Sans, sans-serif',
+                    fontFamily: 'DM Sans, sans-serif',
                     fontWeight: 600, fontSize: 13.5, cursor: 'pointer',
                     opacity: completing ? 0.5 : 1,
                     transition: 'opacity 0.15s, transform 0.1s',
@@ -287,11 +287,11 @@ function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             {slot ? (
-              <span style={{ fontSize: 12, fontFamily: 'Fira Code, monospace', fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 5, padding: '1px 7px' }}>
+              <span style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 5, padding: '1px 7px' }}>
                 {formatTime(slot.start)} → {formatTime(slot.end)}
               </span>
             ) : (
-              <span style={{ fontSize: 12, color: 'var(--text-2)', fontFamily: 'Fira Code, monospace' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-2)', fontFamily: 'DM Mono, monospace' }}>
                 {formatMinutes(task.estimate_minutes)}
               </span>
             )}
@@ -416,7 +416,7 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
                 >
                   <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)' }}>{group.label}</span>
                   <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'Fira Code, monospace', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', gap: 6 }}>
                     {group.tasks.length}
                     {isCollapsible && (
                       <span style={{
@@ -456,7 +456,7 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
             >
               <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>✓ Completed</span>
               <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-              <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'Fira Code, monospace', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {completedTasks.length}
                 <span style={{
                   fontSize: 14, color: '#16a34a',

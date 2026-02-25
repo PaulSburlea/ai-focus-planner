@@ -165,7 +165,7 @@ export default function Auth() {
                 padding: '3px 10px', borderRadius: 6,
                 background: 'var(--surface-2)', border: '1px solid var(--border)',
                 color: 'var(--text-2)', fontSize: 11,
-                fontFamily: 'Fira Code, monospace'
+                fontFamily: 'DM Mono, monospace'
               }}>{t}</span>
             ))}
           </div>

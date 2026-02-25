@@ -53,13 +53,13 @@ export default function AiPlanCard({ plan, tasks, onAccept, onReject }: Props) {
           <p style={{
             fontSize: 11, color: 'var(--text-2)',   // era var(--muted)
             textTransform: 'uppercase', letterSpacing: '0.08em',
-            fontFamily: 'Fira Code, monospace', marginBottom: 10
+            fontFamily: 'DM Mono, monospace', marginBottom: 10
           }}>Schedule</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {plan.slots.map((slot, i) => (
               <div key={i} className="slot-row">   {/* era slot-card */}
                 <div style={{
-                  fontFamily: 'Fira Code, monospace', fontSize: 12,
+                  fontFamily: 'DM Mono, monospace', fontSize: 12,
                   color: 'var(--accent)', minWidth: 100
                 }}>
                   {formatTime(slot.start)} → {formatTime(slot.end)}
@@ -69,7 +69,7 @@ export default function AiPlanCard({ plan, tasks, onAccept, onReject }: Props) {
                 </div>
                 <span style={{
                   fontSize: 11, color: 'var(--text-2)',   // era var(--muted)
-                  fontFamily: 'Fira Code, monospace'
+                  fontFamily: 'DM Mono, monospace'
                 }}>#{i + 1}</span>
               </div>
             ))}
@@ -82,7 +82,7 @@ export default function AiPlanCard({ plan, tasks, onAccept, onReject }: Props) {
         <p style={{
           fontSize: 11, color: 'var(--text-2)',   // era var(--muted)
           textTransform: 'uppercase', letterSpacing: '0.08em',
-          fontFamily: 'Fira Code, monospace', marginBottom: 10
+          fontFamily: 'DM Mono, monospace', marginBottom: 10
         }}>Priority</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {plan.ordered_task_ids.map((id, i) => (
@@ -93,7 +93,7 @@ export default function AiPlanCard({ plan, tasks, onAccept, onReject }: Props) {
             }}>
               <span style={{
                 color: 'var(--accent)', marginRight: 6,
-                fontFamily: 'Fira Code, monospace'
+                fontFamily: 'DM Mono, monospace'
               }}>{i + 1}.</span>
               {getTaskTitle(id)}
             </span>

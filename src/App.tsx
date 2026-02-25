@@ -164,11 +164,11 @@ async function handleAcceptPlan() {
             {/* Stats */}
             <div className="header-stats" style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
               <div style={{ padding: '6px 14px', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', fontFamily: 'Fira Code, monospace', lineHeight: 1 }}>{todayOnlyTasks.length}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', fontFamily: 'DM Mono, monospace', lineHeight: 1 }}>{todayOnlyTasks.length}</span>
                 <span style={{ fontSize: 9, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>today</span>
               </div>
               <div style={{ padding: '6px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', fontFamily: 'Fira Code, monospace', lineHeight: 1 }}>{todayHours}h</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', fontFamily: 'DM Mono, monospace', lineHeight: 1 }}>{todayHours}h</span>
                 <span style={{ fontSize: 9, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>scheduled</span>
               </div>
             </div>
@@ -237,7 +237,7 @@ async function handleAcceptPlan() {
                     { label: 'Mins',   value: todayMinutes },
                   ].map((s, i) => (
                     <div key={i} style={{ textAlign: 'center', borderRight: i < 2 ? '1px solid var(--border)' : 'none', padding: '4px 8px' }}>
-                      <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--accent)', fontFamily: 'Fira Code, monospace', lineHeight: 1.2 }}>{s.value}</p>
+                      <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--accent)', fontFamily: 'DM Mono, monospace', lineHeight: 1.2 }}>{s.value}</p>
                       <p style={{ fontSize: 10, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 4 }}>{s.label}</p>
                     </div>
                   ))}
@@ -256,7 +256,7 @@ async function handleAcceptPlan() {
                   ].map((s, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 9 }}>
                       <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{s.label}</span>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)', fontFamily: 'Fira Code, monospace' }}>{s.value}</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)', fontFamily: 'DM Mono, monospace' }}>{s.value}</span>
                     </div>
                   ))}
                 </div>
