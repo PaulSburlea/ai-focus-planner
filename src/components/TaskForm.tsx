@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Task } from '../types'
 
 interface Props {
-  onTaskAdded: (task: Omit<Task, 'id' | 'created_at' | 'ai_plan' | 'user_id'>) => Promise<void>
+  onTaskAdded: (task: Omit<Task, 'id' | 'created_at' | 'ai_plan' | 'user_id' | 'sort_order'>) => Promise<void>
 }
 
 const PRESETS = [

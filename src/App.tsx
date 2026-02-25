@@ -54,7 +54,7 @@ const [theme, setTheme] = useState<Theme>(() => {
     setLoading(false)
   }
 
-  async function handleAddTask(task: Omit<Task, 'id' | 'created_at' | 'ai_plan' | 'user_id'>) {
+  async function handleAddTask(task: Omit<Task, 'id' | 'created_at' | 'ai_plan' | 'user_id' | 'sort_order'>) {
     try { const t = await createTask(task); setTasks(p => [t, ...p]); showToast('Task added') }
     catch { showToast('Failed to add task', 'error') }
   }
@@ -89,7 +89,6 @@ const [theme, setTheme] = useState<Theme>(() => {
         ...tasks.filter(t => !plannedIds.has(t.id))
       ] as Task[]
 
-      // Salvează sort_order în DB pentru fiecare task
       await Promise.all(
         reordered.map((t, i) => updateTask(t.id, {
           sort_order: i,

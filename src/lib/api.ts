@@ -11,7 +11,7 @@ export async function getTasks(): Promise<Task[]> {
   return data
 }
 
-export async function createTask(task: Omit<Task, 'id' | 'created_at' | 'ai_plan' | 'user_id'>): Promise<Task> {
+export async function createTask(task: Omit<Task, 'id' | 'created_at' | 'ai_plan' | 'user_id' | 'sort_order'>): Promise<Task> {
   const { data: { user } } = await supabase.auth.getUser()
   const { data, error } = await supabase
     .from('tasks')
