@@ -1,153 +1,161 @@
 # AI Focus Planner
 
-An intelligent task management application that uses AI to optimize your daily schedule. Built with React, TypeScript, and OpenAI's GPT-4o-mini.
+> Intelligent task management that schedules your day — not just lists it.
+
+![AI Focus Planner Screenshot](./public/screenshot.png)
+<!-- Replace with your actual screenshot -->
 
 **Live Demo:** https://ai-focus-planner-iota.vercel.app/
 
-## Features
+---
 
-- **Task Management** - Create, update, delete, and track tasks with estimates and deadlines
-- **AI-Powered Optimization** - Let GPT-4o-mini analyze your tasks and generate an optimal daily schedule
-- **Smart Scheduling** - AI considers deadlines, task estimates, and working hours (9:00-18:00)
-- **Dark/Light Theme** - Toggle between themes with persistence
-- **Past Tasks View** - Separate view for completed and historical tasks
-- **Real-time Stats** - Track today's tasks, scheduled hours, and completion status
-- **User Authentication** - Secure auth via Supabase (email/password + Google OAuth)
+## What it does
+
+AI Focus Planner is a task management app that goes one step further than a to-do list. You add your tasks with time estimates and deadlines, then hit **"Optimize my day"** — the app calls GPT-4o-mini, which analyzes your workload and returns a concrete time-blocked schedule starting from the current moment.
+
+You can accept the AI plan (tasks reorder and display their assigned time slots) or discard it and keep your original list. Completed tasks move to a separate "Past & Completed" view so your active queue stays clean.
+
+---
 
 ## Tech Stack
 
-- **Frontend:** React 19 + TypeScript + Vite
-- **Database:** Supabase (PostgreSQL)
-- **AI:** OpenAI GPT-4o-mini
-- **Styling:** CSS Variables + Tailwind CSS
-- **Deployment:** Vercel
-- **Testing:** Vitest + React Testing Library
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19 + TypeScript + Vite |
+| Styling | CSS Variables + Tailwind CSS |
+| Database | Supabase (PostgreSQL + RLS) |
+| Auth | Supabase Auth (email/password + Google OAuth) |
+| AI | OpenAI GPT-4o-mini via Vercel serverless function |
+| Deployment | Vercel |
+
+---
 
 ## LLMs & Tools Used
 
-| Tool | Purpose |
-|------|---------|
-| **Claude (Anthropic)** | Core implementation, component architecture, business logic |
-| **GLM 4.7 (via Claude Code)** | Refactoring, test generation, code reviews |
-| **OpenAI GPT-4o-mini** | Task scheduling and optimization API |
+| Tool | How I used it |
+|------|--------------|
+| **Claude (Anthropic)** | Primary development assistant — component architecture, business logic, prompt engineering, bug fixing |
+| **Claude Code** | In-editor assistant for refactoring and iterative fixes |
+| **OpenAI GPT-4o-mini** | The AI model that runs inside the app to generate daily schedules |
+
+---
+
+## The Hallucination Problem
+
+**The issue:** GPT-4o-mini was supposed to return pure JSON, but roughly 30% of responses came back wrapped in markdown code fences (` ```json `) or with a sentence of explanation before the JSON object. This caused `JSON.parse()` to throw and the whole optimization flow to fail silently.
+
+**How I solved it — in three steps:**
+
+**1. Prompt engineering first.** I made the system prompt explicit and repeated:
+
+```
+You must respond ONLY with valid JSON — no explanation, no markdown, no extra text.
+```
+
+This alone dropped the failure rate significantly, but not to zero.
+
+**2. Defensive parsing as a safety net.** I wrote a `safeParseJson()` utility that strips markdown artifacts before parsing:
+
+```typescript
+export function safeParseJson(text: string) {
+  try {
+    const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+    return JSON.parse(clean)
+  } catch {
+    return null
+  }
+}
+```
+
+**3. Runtime schema validation.** Even after parsing, I validate that the required fields exist before returning to the client:
+
+```typescript
+if (!parsed?.ordered_task_ids || !parsed?.slots || !parsed?.rationale) {
+  return res.status(500).json({ error: 'Invalid response from AI. Please try again.' })
+}
+```
+
+The key insight was treating LLM output like any untrusted external API — parse defensively, validate the shape, and fail gracefully with a user-friendly message rather than a silent crash.
+
+---
 
 ## Setup Locally
 
-1. **Clone the repo**
-   ```bash
-   git clone https://github.com/yourusername/ai-focus-planner.git
-   cd ai-focus-planner
-   ```
+**1. Clone the repo**
+```bash
+git clone https://github.com/yourusername/ai-focus-planner.git
+cd ai-focus-planner
+```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+**2. Install dependencies**
+```bash
+npm install
+```
 
-3. **Set up Supabase**
-   - Create a project at [supabase.com](https://supabase.com)
-   - Run this SQL in the Supabase SQL Editor:
-   ```sql
-   create table tasks (
-     id uuid default gen_random_uuid() primary key,
-     user_id uuid default auth.uid() not null,
-     title text not null,
-     estimate_minutes integer not null,
-     deadline timestamp with time zone,
-     notes text,
-     ai_plan jsonb,
-     completed boolean default false,
-     sort_order integer default 0,
-     created_at timestamp with time zone default now()
-   );
-
-   alter table tasks enable row level security;
-   create policy "Users can only access their own tasks" on tasks
-     for all using (auth.uid() = user_id);
-
-   -- Enable Google OAuth in Supabase Auth settings
-   ```
-
-4. **Environment variables**
-   - Copy `.env.example` to `.env`
-   - Fill in your values:
-   ```env
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
-   SUPABASE_SECRET_KEY=your_supabase_service_role_key
-   OPENAI_API_KEY=your_openai_api_key
-   FRONTEND_URL=http://localhost:5173
-   ```
-
-5. **Run the app**
-   ```bash
-   npm run dev
-   ```
-
-## How AI Optimization Works
-
-1. User selects tasks for the day
-2. Frontend sends tasks to `/api/optimize` (Vercel serverless function)
-3. GPT-4o-mini analyzes deadlines and estimates
-4. AI returns:
-   - Optimized task order
-   - Time slots for each task
-   - Rationale for scheduling decisions
-5. User can accept or discard the plan
-
-## Technical Challenge: The "Hallucination" Problem
-
-**The Issue:** When I first implemented the AI optimization endpoint, GPT-4o-mini occasionally returned malformed responses - sometimes wrapping the JSON in markdown code blocks (\`\`\`json), sometimes adding explanatory text before/after the JSON.
-
-**How I Solved It:**
-1. **Prompt Engineering:** I refined the system prompt to explicitly state "respond ONLY with valid JSON - no explanation, no markdown"
-2. **Defensive Parsing:** Created a `safeParseJson()` function that strips markdown before parsing:
-   ```typescript
-   const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-   ```
-3. **Validation:** Added runtime validation to check if the parsed response has all required fields (`ordered_task_ids`, `slots`, `rationale`)
-4. **Fallback:** Return a user-friendly error if parsing fails, asking them to try again
-
-This iterative prompting approach reduced the failure rate from ~30% to near 0%.
-
-## Database Schema
+**3. Create a Supabase project** at [supabase.com](https://supabase.com) and run this SQL:
 
 ```sql
-tasks (
-  id: uuid (primary key)
-  user_id: uuid (foreign key to auth.users)
-  title: text
-  estimate_minutes: integer
-  deadline: timestamp (nullable)
-  notes: text (nullable)
-  ai_plan: jsonb (nullable) - stores the AI-optimized schedule
-  completed: boolean
-  sort_order: integer - for custom ordering
-  created_at: timestamp
-)
+create table tasks (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid default auth.uid() not null,
+  title text not null,
+  estimate_minutes integer not null,
+  deadline timestamp with time zone,
+  notes text,
+  ai_plan jsonb,
+  completed boolean default false,
+  sort_order integer default 0,
+  created_at timestamp with time zone default now()
+);
+
+alter table tasks enable row level security;
+
+create policy "Users can only access their own tasks"
+  on tasks for all using (auth.uid() = user_id);
 ```
+
+**4. Set environment variables** — copy `.env.example` to `.env`:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+SUPABASE_SECRET_KEY=your_supabase_service_role_key
+OPENAI_API_KEY=your_openai_api_key
+FRONTEND_URL=http://localhost:5173
+```
+
+**5. Run**
+```bash
+npm run dev
+```
+
+---
 
 ## Project Structure
 
 ```
 ai-focus-planner/
 ├── api/
-│   └── optimize.ts          # AI optimization endpoint
+│   └── optimize.ts          # Vercel serverless function — AI scheduling
 ├── src/
-│   ├── components/          # React components
+│   ├── components/
+│   │   ├── Auth.tsx          # Login / register / landing page
+│   │   ├── TaskForm.tsx      # Add new tasks
+│   │   ├── TaskList.tsx      # Task list, groups, modal
+│   │   ├── AiPlanCard.tsx    # AI plan preview (accept / discard)
+│   │   └── ProfileMenu.tsx   # User stats dropdown
 │   ├── lib/
-│   │   ├── api.ts           # Database operations
+│   │   ├── api.ts            # Supabase CRUD + optimize call
 │   │   └── supabaseClient.ts
-│   ├── types.ts             # TypeScript interfaces
-│   └── App.tsx              # Main app component
-├── public/                  # Static assets
-└── vercel.json             # Deployment config
+│   ├── types.ts
+│   └── App.tsx
+└── vercel.json
 ```
-
-## License
-
-MIT
 
 ---
 
-**Built with AI assistance from Claude and GLM-4.7** 🤖
+## Roadmap
+
+- Email/push notifications for upcoming deadlines
+- Weekly calendar view
+- Team workspaces with shared task boards

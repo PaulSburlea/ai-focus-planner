@@ -2,17 +2,36 @@ import { useState, useRef, useEffect } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import type { Task } from '../types'
 
+/**
+ * Props for the ProfileMenu component.
+ * 
+ * @interface Props
+ * @property {Session} session - The active Supabase session containing user details.
+ * @property {Task[]} tasks - The list of tasks used to calculate user statistics.
+ * @property {() => void} onSignOut - Callback function to handle the sign-out process.
+ */
 interface Props {
   session: Session
   tasks: Task[]
   onSignOut: () => void
 }
 
+/**
+ * Displays a user profile menu with task statistics and a sign-out option.
+ * 
+ * Features:
+ * - Toggles a dropdown menu on click.
+ * - Closes automatically when clicking outside the component.
+ * - Shows task statistics (Total, Active, Done) and total estimated time.
+ * 
+ * @param {Props} props - The component props.
+ * @returns {JSX.Element} The rendered profile menu.
+ */
 export default function ProfileMenu({ session, tasks, onSignOut }: Props) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  // Închide la click outside
+  // Close the dropdown menu when clicking outside the component
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -23,9 +42,14 @@ export default function ProfileMenu({ session, tasks, onSignOut }: Props) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  // Calculate statistics based on the provided tasks
   const completedTasks = tasks.filter(t => t.completed)
   const activeTasks    = tasks.filter(t => !t.completed)
+  
+  // Sum up the estimated minutes for all tasks to display "Total time tracked"
   const totalMinutes   = tasks.reduce((s, t) => s + t.estimate_minutes, 0)
+  
+  // Extract user initials (first 2 characters of email) for the avatar
   const initials       = session.user.email?.slice(0, 2).toUpperCase() ?? '?'
 
   return (
@@ -49,7 +73,7 @@ export default function ProfileMenu({ session, tasks, onSignOut }: Props) {
         {initials}
       </button>
 
-      {/* Dropdown */}
+      {/* Dropdown Menu */}
       {open && (
         <div
           className="fade-in"
@@ -63,7 +87,7 @@ export default function ProfileMenu({ session, tasks, onSignOut }: Props) {
             overflow: 'hidden'
           }}
         >
-          {/* User info */}
+          {/* User Info Section */}
           <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
@@ -83,7 +107,7 @@ export default function ProfileMenu({ session, tasks, onSignOut }: Props) {
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Statistics Section */}
           <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
             <p style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Stats</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
@@ -109,7 +133,7 @@ export default function ProfileMenu({ session, tasks, onSignOut }: Props) {
             </div>
           </div>
 
-          {/* Actions */}
+          {/* Actions Section */}
           <div style={{ padding: '8px' }}>
             <button
               onClick={() => { onSignOut(); setOpen(false) }}

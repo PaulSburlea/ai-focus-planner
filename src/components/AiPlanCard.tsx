@@ -1,5 +1,14 @@
 import type { Task, AiPlan } from '../types'
 
+/**
+ * Props for the AiPlanCard component.
+ * 
+ * @interface Props
+ * @property {AiPlan} plan - The AI-generated schedule and priority plan containing slots and rationale.
+ * @property {Task[]} tasks - The user's current list of tasks, used to map task IDs to their titles.
+ * @property {() => void} onAccept - Callback function triggered when the user accepts and saves the plan.
+ * @property {() => void} onReject - Callback function triggered when the user discards the plan.
+ */
 interface Props {
   plan: AiPlan
   tasks: Task[]
@@ -7,12 +16,32 @@ interface Props {
   onReject: () => void
 }
 
+/**
+ * Displays the AI-generated optimization plan.
+ * 
+ * This component presents the user with:
+ * 1. A rationale explaining the AI's scheduling logic.
+ * 2. A specific timeline of scheduled slots.
+ * 3. A prioritized list of tasks.
+ * 
+ * @param {Props} props - The component props.
+ * @returns {JSX.Element} The rendered AI plan card.
+ */
 export default function AiPlanCard({ plan, tasks, onAccept, onReject }: Props) {
+  
+  /**
+   * Helper to retrieve the human-readable title of a task by its ID.
+   * Returns the ID itself if the task is not found.
+   */
   function getTaskTitle(taskId: string) {
     const task = tasks.find(t => t.id === taskId)
     return task ? task.title : taskId
   }
 
+  /**
+   * Formats an ISO date string into a localized time string (HH:MM).
+   * Uses 'ro-RO' locale to ensure 24-hour format is used.
+   */
   function formatTime(isoString: string) {
     return new Date(isoString).toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' })
   }
@@ -58,7 +87,7 @@ export default function AiPlanCard({ plan, tasks, onAccept, onReject }: Props) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {plan.slots.map((slot, i) => (
               <div key={i} className="slot-row">
-                {/* ora — DM Sans cu tabular-nums, nu mono */}
+                {/* Time display — Uses DM Sans with tabular-nums for alignment, rather than a monospace font */}
                 <div style={{
                   fontFamily: 'DM Sans, sans-serif',
                   fontVariantNumeric: 'tabular-nums',

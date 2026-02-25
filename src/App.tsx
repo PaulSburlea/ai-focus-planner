@@ -9,8 +9,21 @@ import ProfileMenu from './components/ProfileMenu'
 import { getTasks, createTask, updateTask, deleteTask, optimizeDay } from './lib/api'
 import type { Task, AiPlan, Toast } from './types'
 
+/**
+ * Represents the application's visual theme.
+ */
 type Theme = 'dark' | 'light'
 
+/**
+ * The root component of the application.
+ * 
+ * Manages global state including:
+ * - User authentication session.
+ * - Task data and AI optimization plans.
+ * - UI state (loading, toasts, theme, current view).
+ * 
+ * @returns {JSX.Element} The rendered application.
+ */
 export default function App() {
   const [session,    setSession]  = useState<Session | null>(null)
   const [authReady,  setAuthReady]= useState(false)
@@ -19,73 +32,140 @@ export default function App() {
   const [loading,    setLoading]  = useState(false)
   const [optimizing, setOpt]      = useState(false)
   const [toast,      setToast]    = useState<Toast | null>(null)
+  
+  // Initialize theme from local storage or default to 'dark'
   const [theme, setTheme] = useState<Theme>(() => {
     return (localStorage.getItem('theme') as Theme) || 'dark'
   })
+  
+  // Toggle between 'today' (active/upcoming) and 'past' (completed/overdue) views
   const [view, setView] = useState<'today' | 'past'>('today')
 
+  // ── Authentication & Session Management ──────────────────────────────────────────
   useEffect(() => {
+    // Check for an existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setAuthReady(true)
     })
+
+    // Listen for auth state changes (sign in, sign out, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
-      if (!session) setTasks([])
+      if (!session) setTasks([]) // Clear tasks on sign out
     })
+    
     return () => subscription.unsubscribe()
   }, [])
 
+  // Load tasks whenever a valid session is established
   useEffect(() => { if (session) loadTasks() }, [session])
+
+  // Apply theme changes to the document root and persist to local storage
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
     localStorage.setItem('theme', theme)
   }, [theme])
 
+  /**
+   * Displays a temporary toast notification.
+   * 
+   * @param {string} message - The text to display.
+   * @param {'success' | 'error'} type - The type of notification (default: 'success').
+   */
   function showToast(message: string, type: 'success' | 'error' = 'success') {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3000)
   }
 
+  /**
+   * Fetches the user's tasks from the API.
+   */
   async function loadTasks() {
     setLoading(true)
-    try { setTasks(await getTasks()) }
-    catch { showToast('Failed to load tasks', 'error') }
+    try { 
+      setTasks(await getTasks()) 
+    } catch { 
+      showToast('Failed to load tasks', 'error') 
+    }
     setLoading(false)
   }
 
+  /**
+   * Creates a new task and updates the local state.
+   */
   async function handleAddTask(task: Omit<Task, 'id' | 'created_at' | 'ai_plan' | 'user_id' | 'sort_order'>) {
-    try { const t = await createTask(task); setTasks(p => [t, ...p]); showToast('Task added') }
-    catch { showToast('Failed to add task', 'error') }
+    try { 
+      const t = await createTask(task)
+      setTasks(p => [t, ...p])
+      showToast('Task added') 
+    } catch { 
+      showToast('Failed to add task', 'error') 
+    }
   }
 
+  /**
+   * Updates an existing task and reflects changes locally.
+   */
   async function handleUpdateTask(id: string, updates: Partial<Task>) {
-    try { const u = await updateTask(id, updates); setTasks(p => p.map(t => t.id === id ? u : t)); showToast('Saved') }
-    catch { showToast('Failed to update', 'error') }
+    try { 
+      const u = await updateTask(id, updates)
+      setTasks(p => p.map(t => t.id === id ? u : t))
+      showToast('Saved') 
+    } catch { 
+      showToast('Failed to update', 'error') 
+    }
   }
 
+  /**
+   * Deletes a task by ID.
+   */
   async function handleDeleteTask(id: string) {
-    try { await deleteTask(id); setTasks(p => p.filter(t => t.id !== id)); showToast('Deleted') }
-    catch { showToast('Failed to delete', 'error') }
+    try { 
+      await deleteTask(id)
+      setTasks(p => p.filter(t => t.id !== id))
+      showToast('Deleted') 
+    } catch { 
+      showToast('Failed to delete', 'error') 
+    }
   }
 
+  /**
+   * Triggers the AI optimization process for the current task list.
+   */
   async function handleOptimize() {
-    if (!tasks.length) { showToast('Add some tasks first', 'error'); return }
+    if (!tasks.length) { 
+      showToast('Add some tasks first', 'error')
+      return 
+    }
     setOpt(true)
-    try { setAiPlan(await optimizeDay(tasks)); showToast('Plan ready') }
-    catch { showToast('Optimization failed', 'error') }
+    try { 
+      setAiPlan(await optimizeDay(tasks))
+      showToast('Plan ready') 
+    } catch { 
+      showToast('Optimization failed', 'error') 
+    }
     setOpt(false)
   }
 
+  /**
+   * Applies the AI-generated plan:
+   * 1. Reorders tasks based on the AI's priority list.
+   * 2. Assigns the AI plan metadata to the relevant tasks.
+   * 3. Persists changes to the backend.
+   */
   async function handleAcceptPlan() {
     if (!aiPlan || !tasks.length) return
     try {
       const plannedIds = new Set(aiPlan.ordered_task_ids)
+      
+      // Reconstruct the task list: Planned tasks first, then others
       const reordered = [
         ...aiPlan.ordered_task_ids.map(id => tasks.find(t => t.id === id)).filter(Boolean),
         ...tasks.filter(t => !plannedIds.has(t.id))
       ] as Task[]
 
+      // Update all tasks in parallel
       await Promise.all(
         reordered.map((t, i) => updateTask(t.id, {
           sort_order: i,
@@ -93,6 +173,7 @@ export default function App() {
         }))
       )
 
+      // Update local state
       setTasks(reordered.map((t, i) => ({
         ...t,
         sort_order: i,
@@ -101,18 +182,26 @@ export default function App() {
 
       showToast('Plan applied!')
       setAiPlan(null)
-    } catch { showToast('Failed to save plan', 'error') }
+    } catch { 
+      showToast('Failed to save plan', 'error') 
+    }
   }
 
+  /**
+   * Signs the user out and clears the session.
+   */
   async function handleSignOut() {
     await supabase.auth.signOut()
     showToast('Signed out')
   }
 
-  // ── Stats ──
-  const today = new Date(); today.setHours(0, 0, 0, 0)
+  // ── Statistics Calculation ──────────────────────────────────────────────────────
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
 
   const activeTasks = tasks.filter(t => !t.completed)
+  
+  // Filter tasks due today
   const todayActiveTasks = activeTasks.filter(t => {
     if (!t.deadline) return false
     const d = new Date(t.deadline)
@@ -120,20 +209,25 @@ export default function App() {
            d.getMonth()    === today.getMonth() &&
            d.getDate()     === today.getDate()
   })
+  
   const todayMinutes = todayActiveTasks.reduce((s, t) => s + t.estimate_minutes, 0)
   const todayHours   = (todayMinutes / 60).toFixed(1)
 
-  // ── Filtrare după view ──
+  // ── View Filtering ──────────────────────────────────────────────────────────────
   const filteredTasks = tasks.filter(t => {
     if (view === 'past') {
+      // Past view: Completed tasks OR overdue tasks from previous days
       if (t.completed) return true
       if (!t.deadline) return false
-      const d = new Date(t.deadline); d.setHours(0, 0, 0, 0)
+      const d = new Date(t.deadline)
+      d.setHours(0, 0, 0, 0)
       return d < today
     } else {
+      // Today view: Active tasks due today or in the future (or no deadline)
       if (t.completed) return false
       if (!t.deadline) return true
-      const d = new Date(t.deadline); d.setHours(0, 0, 0, 0)
+      const d = new Date(t.deadline)
+      d.setHours(0, 0, 0, 0)
       return d >= today
     }
   })
@@ -141,6 +235,7 @@ export default function App() {
   const pastCompleted  = filteredTasks.filter(t => t.completed).length
   const pastIncomplete = filteredTasks.filter(t => !t.completed).length
 
+  // ── Render Loading State ────────────────────────────────────────────────────────
   if (!authReady) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -149,8 +244,10 @@ export default function App() {
     )
   }
 
+  // ── Render Auth Screen ──────────────────────────────────────────────────────────
   if (!session) return <Auth />
 
+  // ── Render Main App ─────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
 
@@ -184,10 +281,10 @@ export default function App() {
             </span>
           </div>
 
-          {/* Right side */}
+          {/* Right side controls */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
 
-            {/* Stats pill — dispare sub 680px */}
+            {/* Stats Pill (Hidden on mobile < 680px) */}
             <div className="header-stats" style={{
               display: 'flex', alignItems: 'center',
               background: 'var(--surface-2)', border: '1px solid var(--border)',
@@ -211,7 +308,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Theme toggle — dispare sub 560px */}
+            {/* Theme Toggle (Hidden on mobile < 560px) */}
             <button
               onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
               className="header-theme-btn"
@@ -227,16 +324,16 @@ export default function App() {
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
 
-            {/* Profile — mereu vizibil */}
+            {/* User Profile Menu */}
             <ProfileMenu session={session} tasks={tasks} onSignOut={handleSignOut} />
 
-            {/* Divider — dispare sub 560px */}
+            {/* Divider (Hidden on mobile < 560px) */}
             <div className="header-divider" style={{
               width: 1, height: 20,
               background: 'var(--border)', flexShrink: 0
             }} />
 
-            {/* Optimize — mereu vizibil */}
+            {/* AI Optimize Button */}
             <button
               onClick={handleOptimize}
               disabled={optimizing}
@@ -263,10 +360,10 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── Main ── */}
+      {/* ── Main Content ── */}
       <main style={{ maxWidth: 1320, margin: '0 auto', padding: '28px 24px' }}>
 
-        {/* Tabs */}
+        {/* View Tabs */}
         <div style={{
           display: 'flex', gap: 4, marginBottom: 24,
           background: 'var(--surface)', border: '1px solid var(--border)',
@@ -295,7 +392,7 @@ export default function App() {
 
         <div className="main-grid">
 
-          {/* Left — form + sidebar */}
+          {/* Left Column: Task Form or Past Summary */}
           <div className="form-sticky" style={{
             display: 'flex', flexDirection: 'column', gap: 14,
             position: 'sticky', top: 78
@@ -334,7 +431,7 @@ export default function App() {
             )}
           </div>
 
-          {/* Right — task list */}
+          {/* Right Column: Task List & AI Plan */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {aiPlan && view === 'today' && (
               <div className="fade-in">
@@ -354,7 +451,7 @@ export default function App() {
         </div>
       </main>
 
-      {/* ── Toast ── */}
+      {/* ── Toast Notification ── */}
       {toast && (
         <div className="fade-in" style={{
           position: 'fixed', bottom: 24, right: 24, zIndex: 100,

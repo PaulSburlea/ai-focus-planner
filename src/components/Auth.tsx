@@ -1,8 +1,22 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
+/**
+ * Represents the current view mode of the authentication component.
+ */
 type Mode = 'landing' | 'login' | 'register'
 
+/**
+ * Authentication Component.
+ * 
+ * Manages the application's entry point, handling:
+ * 1. The Landing Page (marketing view).
+ * 2. User Login (Email/Password).
+ * 3. User Registration (Email/Password).
+ * 4. OAuth (Google) authentication.
+ * 
+ * @returns {JSX.Element} The rendered authentication view.
+ */
 export default function Auth() {
   const [mode,     setMode]     = useState<Mode>('landing')
   const [email,    setEmail]    = useState('')
@@ -11,6 +25,12 @@ export default function Auth() {
   const [error,    setError]    = useState<string | null>(null)
   const [success,  setSuccess]  = useState<string | null>(null)
 
+  /**
+   * Handles the submission of the email/password form.
+   * Differentiates between 'login' and 'register' modes to call the appropriate Supabase method.
+   * 
+   * @param {React.FormEvent} e - The form submission event.
+   */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -18,16 +38,27 @@ export default function Auth() {
     setSuccess(null)
 
     if (mode === 'register') {
+      // Attempt to sign up a new user
       const { error } = await supabase.auth.signUp({ email, password })
-      if (error) setError(error.message)
-      else setSuccess('Account created! Check your email to confirm.')
+      if (error) {
+        setError(error.message)
+      } else {
+        setSuccess('Account created! Check your email to confirm.')
+      }
     } else {
+      // Attempt to sign in an existing user
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setError(error.message)
+      if (error) {
+        setError(error.message)
+      }
     }
     setLoading(false)
   }
 
+  /**
+   * Initiates the Google OAuth flow.
+   * Redirects the user to the current origin after successful authentication.
+   */
   async function handleGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -36,12 +67,13 @@ export default function Auth() {
     if (error) setError(error.message)
   }
 
-  // ── Landing Page ──
+  // ── Landing Page View ─────────────────────────────────────────────────────────────
+  // Rendered when the user has not yet selected "Sign in" or "Get started".
   if (mode === 'landing') {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
 
-        {/* Nav */}
+        {/* Navigation Bar */}
         <nav style={{
           borderBottom: '1px solid var(--border)',
           background: 'var(--surface)',
@@ -64,10 +96,10 @@ export default function Auth() {
           </div>
         </nav>
 
-        {/* Hero */}
+        {/* Hero Section */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px 40px', textAlign: 'center' }}>
 
-          {/* Badge */}
+          {/* Feature Badge */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 7,
             background: 'var(--accent-dim)', border: '1px solid var(--accent)',
@@ -77,7 +109,7 @@ export default function Auth() {
             <span>✦</span> AI-powered task scheduling
           </div>
 
-          {/* Title */}
+          {/* Main Title */}
           <h1 style={{
             fontSize: 'clamp(32px, 6vw, 56px)',
             fontWeight: 800, color: 'var(--text)',
@@ -95,7 +127,7 @@ export default function Auth() {
             Add your tasks, set deadlines, and let AI organize your entire workday into an optimized schedule — in seconds.
           </p>
 
-          {/* CTAs */}
+          {/* Call to Action Buttons */}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
             <button
               onClick={() => setMode('register')}
@@ -113,12 +145,12 @@ export default function Auth() {
             </button>
           </div>
 
-          {/* Social proof */}
+          {/* Social Proof / Trust */}
           <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 20 }}>
             No credit card required · Free to use
           </p>
 
-          {/* Features */}
+          {/* Feature Grid */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -154,7 +186,7 @@ export default function Auth() {
             ))}
           </div>
 
-          {/* Built with */}
+          {/* Tech Stack Footer */}
           <div style={{
             marginTop: 48, display: 'flex', alignItems: 'center', gap: 16,
             fontSize: 12, color: 'var(--text-3)', flexWrap: 'wrap', justifyContent: 'center'
@@ -174,7 +206,8 @@ export default function Auth() {
     )
   }
 
-  // ── Auth Form ──
+  // ── Auth Form View ────────────────────────────────────────────────────────────────
+  // Rendered when mode is 'login' or 'register'.
   return (
     <div style={{
       minHeight: '100vh', background: 'var(--bg)',
@@ -183,7 +216,7 @@ export default function Auth() {
     }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
 
-        {/* Back */}
+        {/* Back Button */}
         <button
           onClick={() => { setMode('landing'); setError(null) }}
           style={{ fontSize: 13, color: 'var(--text-2)', background: 'none', border: 'none', cursor: 'pointer', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 6, padding: 0 }}
@@ -191,7 +224,7 @@ export default function Auth() {
           ← Back
         </button>
 
-        {/* Logo */}
+        {/* Logo & Header */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
             width: 48, height: 48, borderRadius: 14,
@@ -207,7 +240,7 @@ export default function Auth() {
           </p>
         </div>
 
-        {/* Card */}
+        {/* Auth Card */}
         <div className="card" style={{ padding: 28 }}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
@@ -224,11 +257,13 @@ export default function Auth() {
               )}
             </div>
 
+            {/* Error Message */}
             {error && (
               <div style={{ padding: '10px 14px', borderRadius: 9, background: 'var(--danger-dim)', border: '1px solid var(--danger)', fontSize: 13, color: 'var(--danger)' }}>
                 {error}
               </div>
             )}
+            {/* Success Message */}
             {success && (
               <div style={{ padding: '10px 14px', borderRadius: 9, background: 'rgba(22,163,74,0.1)', border: '1px solid #16a34a', fontSize: 13, color: '#16a34a' }}>
                 {success}
@@ -247,7 +282,7 @@ export default function Auth() {
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
 
-          {/* Google */}
+          {/* Google OAuth Button */}
           <button type="button" onClick={handleGoogle} className="btn-ghost"
             style={{ width: '100%', padding: '11px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, fontSize: 13, fontWeight: 600 }}>
             <svg width="16" height="16" viewBox="0 0 24 24">
@@ -259,7 +294,7 @@ export default function Auth() {
             Continue with Google
           </button>
 
-          {/* Toggle */}
+          {/* Mode Toggle (Login <-> Register) */}
           <div style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: 'var(--text-2)' }}>
             {mode === 'login' ? (
               <>Don't have an account?{' '}

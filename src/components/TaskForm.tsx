@@ -1,10 +1,21 @@
 import { useState } from 'react'
 import type { Task } from '../types'
 
+/**
+ * Props for the TaskForm component.
+ * 
+ * @interface Props
+ * @property {(task: Omit<Task, 'id' | 'created_at' | 'ai_plan' | 'user_id' | 'sort_order'>) => Promise<void>} onTaskAdded 
+ *           Callback function triggered when a new task is successfully submitted. 
+ *           Receives the task data without system-generated fields (id, timestamps, etc.).
+ */
 interface Props {
   onTaskAdded: (task: Omit<Task, 'id' | 'created_at' | 'ai_plan' | 'user_id' | 'sort_order'>) => Promise<void>
 }
 
+/**
+ * Predefined duration options to allow quick selection of common time estimates.
+ */
 const PRESETS = [
   { label: '15m', value: 15 },
   { label: '30m', value: 30 },
@@ -14,6 +25,12 @@ const PRESETS = [
   { label: '2h',  value: 120 },
 ]
 
+/**
+ * Formats a duration in minutes into a human-readable string (e.g., "1h 30m").
+ * 
+ * @param {number} min - The duration in minutes.
+ * @returns {string} The formatted time string.
+ */
 function formatMinutes(min: number) {
   if (min < 60) return `${min}m`
   const h = Math.floor(min / 60)
@@ -21,22 +38,44 @@ function formatMinutes(min: number) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
+/**
+ * A form component for creating new tasks.
+ * 
+ * Features:
+ * - Title input.
+ * - Duration estimation via presets or custom numeric input.
+ * - Optional deadline date/time picker.
+ * - Optional notes field.
+ * 
+ * @param {Props} props - The component props.
+ * @returns {JSX.Element} The rendered task creation form.
+ */
 export default function TaskForm({ onTaskAdded }: Props) {
-  const [title,      setTitle]      = useState('')
-  const [estimate,   setEstimate]   = useState('')
+  const [title,        setTitle]        = useState('')
+  const [estimate,     setEstimate]     = useState('')
   const [deadlineDate, setDeadlineDate] = useState('')
   const [deadlineTime, setDeadlineTime] = useState('09:00')
-  const [notes,      setNotes]      = useState('')
-  const [loading,    setLoading]    = useState(false)
+  const [notes,        setNotes]        = useState('')
+  const [loading,      setLoading]      = useState(false)
   const [showDeadline, setShowDeadline] = useState(false)
 
+  /**
+   * Handles the form submission.
+   * Validates inputs, constructs the deadline timestamp, and calls the parent handler.
+   */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    
+    // Basic validation: Title and estimate are required
     if (!title.trim() || !estimate) return
+    
     setLoading(true)
 
     let deadline: string | null = null
+    
+    // Construct ISO timestamp if a deadline is set
     if (showDeadline && deadlineDate) {
+      // Combines date and time strings into a valid ISO format
       deadline = new Date(`${deadlineDate}T${deadlineTime}`).toISOString()
     }
 
@@ -47,15 +86,23 @@ export default function TaskForm({ onTaskAdded }: Props) {
       notes: notes.trim() || null,
       completed: false,
     })
-    setTitle(''); setEstimate(''); setDeadlineDate(''); setDeadlineTime('09:00'); setNotes(''); setShowDeadline(false)
+
+    // Reset form state after successful submission
+    setTitle('')
+    setEstimate('')
+    setDeadlineDate('')
+    setDeadlineTime('09:00')
+    setNotes('')
+    setShowDeadline(false)
     setLoading(false)
   }
 
-  // Min date = today
+  // Calculate today's date string (YYYY-MM-DD) to set the minimum allowed date in the picker
   const todayStr = new Date().toISOString().split('T')[0]
 
   return (
     <div className="card" style={{ padding: 26 }}>
+      {/* Header */}
       <div style={{ marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{
           width: 30, height: 30, borderRadius: 8,
@@ -71,7 +118,7 @@ export default function TaskForm({ onTaskAdded }: Props) {
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-        {/* Title */}
+        {/* Title Input */}
         <div>
           <label className="field-label">What needs to be done?</label>
           <input
@@ -84,7 +131,7 @@ export default function TaskForm({ onTaskAdded }: Props) {
           />
         </div>
 
-        {/* Duration */}
+        {/* Duration Input & Presets */}
         <div>
           <label className="field-label">Duration</label>
           <div style={{ display: 'flex', gap: 5, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -113,7 +160,7 @@ export default function TaskForm({ onTaskAdded }: Props) {
           )}
         </div>
 
-        {/* Deadline toggle */}
+        {/* Deadline Toggle & Inputs */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showDeadline ? 10 : 0 }}>
             <label className="field-label" style={{ margin: 0 }}>Deadline</label>
@@ -167,7 +214,7 @@ export default function TaskForm({ onTaskAdded }: Props) {
           )}
         </div>
 
-        {/* Notes */}
+        {/* Notes Input */}
         <div>
           <label className="field-label">Notes <span style={{ color: 'var(--text-3)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
           <textarea
@@ -179,6 +226,7 @@ export default function TaskForm({ onTaskAdded }: Props) {
           />
         </div>
 
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={loading || !title.trim() || !estimate}

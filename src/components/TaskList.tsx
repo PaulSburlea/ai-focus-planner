@@ -1,36 +1,77 @@
 import { useState } from 'react'
 import type { Task } from '../types'
 
+/**
+ * Props for the TaskList component.
+ * 
+ * @interface Props
+ * @property {Task[]} tasks - The complete list of tasks to display.
+ * @property {(id: string) => Promise<void>} onDelete - Callback to delete a task by ID.
+ * @property {(id: string, updates: Partial<Task>) => Promise<void>} onUpdate - Callback to update a task's properties.
+ */
 interface Props {
   tasks: Task[]
   onDelete: (id: string) => Promise<void>
   onUpdate: (id: string, updates: Partial<Task>) => Promise<void>
 }
 
+/**
+ * Predefined duration options for the task edit modal.
+ */
 const PRESETS = [15, 30, 45, 60, 90, 120]
 
+/**
+ * Formats a duration in minutes into a human-readable string (e.g., "1h 30m").
+ * 
+ * @param {number} min - Duration in minutes.
+ * @returns {string} Formatted time string.
+ */
 function formatMinutes(min: number) {
   if (min < 60) return `${min}m`
-  const h = Math.floor(min / 60); const m = min % 60
+  const h = Math.floor(min / 60)
+  const m = min % 60
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
+/**
+ * Calculates the status of a deadline relative to the current time.
+ * Returns a formatted string, a status tag (e.g., "OVERDUE", "today"), and a color code.
+ * 
+ * @param {string} deadline - ISO date string of the deadline.
+ * @returns {{ str: string, tag: string | null, color: string }} Deadline information object.
+ */
 function getDeadlineInfo(deadline: string) {
-  const d = new Date(deadline); const now = new Date()
+  const d = new Date(deadline)
+  const now = new Date()
   const diff = d.getTime() - now.getTime()
   const hours = Math.floor(diff / 3600000)
   const days  = Math.floor(diff / 86400000)
-  const str   = d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+  
+  // Format: "25 Feb, 14:30"
+  const str = d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+  
   if (diff < 0)    return { str, tag: 'OVERDUE', color: '#f87171' }
   if (hours < 3)   return { str, tag: 'due soon', color: '#fb923c' }
   if (days < 1)    return { str, tag: 'today', color: '#facc15' }
+  
   return { str, tag: null, color: 'var(--text-2)' }
 }
 
+/**
+ * Groups tasks into chronological categories: Overdue, Today, Tomorrow, Later, and No Deadline.
+ * 
+ * @param {Task[]} tasks - List of tasks to group.
+ * @returns {{ label: string, tasks: Task[] }[]} Array of task groups.
+ */
 function groupTasksByDay(tasks: Task[]) {
   const groups: { label: string; tasks: Task[] }[] = []
-  const today    = new Date(); today.setHours(0,0,0,0)
-  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1)
+  
+  // Normalize "today" and "tomorrow" to midnight for accurate date comparison
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  const tomorrow = new Date(today)
+  tomorrow.setDate(today.getDate() + 1)
 
   const noDeadline: Task[] = []
   const todayTasks: Task[] = []
@@ -39,12 +80,23 @@ function groupTasksByDay(tasks: Task[]) {
   const pastTasks: Task[] = []
 
   tasks.forEach(t => {
-    if (!t.deadline) { noDeadline.push(t); return }
-    const d = new Date(t.deadline); d.setHours(0,0,0,0)
-    if (d < today)                               pastTasks.push(t)
-    else if (d.getTime() === today.getTime())     todayTasks.push(t)
-    else if (d.getTime() === tomorrow.getTime())  tomorrowTasks.push(t)
-    else                                         laterTasks.push(t)
+    if (!t.deadline) {
+      noDeadline.push(t)
+      return
+    }
+    
+    const d = new Date(t.deadline)
+    d.setHours(0, 0, 0, 0)
+    
+    if (d < today) {
+      pastTasks.push(t)
+    } else if (d.getTime() === today.getTime()) {
+      todayTasks.push(t)
+    } else if (d.getTime() === tomorrow.getTime()) {
+      tomorrowTasks.push(t)
+    } else {
+      laterTasks.push(t)
+    }
   })
 
   if (pastTasks.length)     groups.push({ label: '⚠ Overdue',    tasks: pastTasks })
@@ -56,7 +108,7 @@ function groupTasksByDay(tasks: Task[]) {
   return groups
 }
 
-// ── stilul numeric comun — DM Sans + tabular-nums ─────
+// Common numeric style using DM Sans and tabular-nums for alignment
 const numericStyle: React.CSSProperties = {
   fontFamily: 'DM Sans, sans-serif',
   fontVariantNumeric: 'tabular-nums',
@@ -64,7 +116,18 @@ const numericStyle: React.CSSProperties = {
   letterSpacing: '-0.01em',
 }
 
-// ── Modal ──────────────────────────────────────────────
+// ── Modal Component ──────────────────────────────────────────────
+
+/**
+ * A modal dialog for viewing and editing task details.
+ * 
+ * @param {Object} props - Component props.
+ * @param {Task} props.task - The task to display/edit.
+ * @param {() => void} props.onClose - Callback to close the modal.
+ * @param {(id: string, updates: Partial<Task>) => Promise<void>} props.onSave - Callback to save changes.
+ * @param {(id: string) => Promise<void>} props.onDelete - Callback to delete the task.
+ * @param {(id: string) => Promise<void>} props.onComplete - Callback to mark the task as complete.
+ */
 function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
   task: Task
   onClose: () => void
@@ -75,8 +138,11 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
   const [editing,    setEditing]    = useState(false)
   const [title,      setTitle]      = useState(task.title)
   const [estimate,   setEstimate]   = useState(String(task.estimate_minutes))
+  
+  // Initialize date/time inputs from the task deadline if it exists
   const [deadlineDate, setDeadlineDate] = useState(task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : '')
   const [deadlineTime, setDeadlineTime] = useState(task.deadline ? new Date(task.deadline).toTimeString().slice(0,5) : '09:00')
+  
   const [notes,      setNotes]      = useState(task.notes || '')
   const [saving,     setSaving]     = useState(false)
   const [deleting,   setDeleting]   = useState(false)
@@ -87,7 +153,10 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
   async function handleSave() {
     setSaving(true)
     let deadline: string | null = null
-    if (deadlineDate) deadline = new Date(`${deadlineDate}T${deadlineTime}`).toISOString()
+    if (deadlineDate) {
+      deadline = new Date(`${deadlineDate}T${deadlineTime}`).toISOString()
+    }
+    
     await onSave(task.id, {
       title: title.trim(),
       estimate_minutes: parseInt(estimate),
@@ -114,12 +183,14 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
 
   return (
     <>
+      {/* Backdrop */}
       <div onClick={onClose} style={{
         position: 'fixed', inset: 0, zIndex: 200,
         background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
         animation: 'fadeIn 0.15s ease'
       }} />
 
+      {/* Modal Content */}
       <div style={{
         position: 'fixed', zIndex: 201,
         top: '50%', left: '50%',
@@ -128,6 +199,7 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
       }}>
         <div className="card" style={{ padding: 28, boxShadow: 'var(--shadow-lg)' }}>
 
+          {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
             <p style={{ fontSize: 11, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               {editing ? 'Edit task' : 'Task details'}
@@ -136,6 +208,7 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
           </div>
 
           {editing ? (
+            // ── Edit Mode ──
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label className="field-label">Title</label>
@@ -179,6 +252,7 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
               </div>
             </div>
           ) : (
+            // ── View Mode ──
             <div>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text)', marginBottom: 16, lineHeight: 1.3 }}>
                 {task.title}
@@ -230,7 +304,7 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
               {/* Actions */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {task.completed ? (
-                  /* ── Task completat → Reopen ── */
+                  /* ── Completed Task → Reopen ── */
                   <button
                     onClick={async () => { await onSave(task.id, { completed: false }); onClose() }}
                     style={{
@@ -254,7 +328,7 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
                     <span>↩</span> Reopen task
                   </button>
                 ) : (
-                  /* ── Task activ → Mark as done ── */
+                  /* ── Active Task → Mark as done ── */
                   <button
                     onClick={handleComplete}
                     disabled={completing}
@@ -291,7 +365,15 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
   )
 }
 
-// ── Task Card ──────────────────────────────────────────
+// ── Task Card Component ──────────────────────────────────────────
+
+/**
+ * Displays a summary card for a single active task.
+ * 
+ * @param {Object} props - Component props.
+ * @param {Task} props.task - The task to display.
+ * @param {() => void} props.onClick - Callback when the card is clicked.
+ */
 function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
   const dl = task.deadline ? getDeadlineInfo(task.deadline) : null
   const slot = task.ai_plan?.slots?.find(s => s.taskId === task.id)
@@ -304,6 +386,7 @@ function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
     <div className="card fade-in" onClick={onClick}
       style={{ padding: '16px 20px', cursor: 'pointer', userSelect: 'none' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Status Indicator Bar */}
         <div style={{
           width: 3, alignSelf: 'stretch', borderRadius: 4, flexShrink: 0, minHeight: 28,
           background: task.ai_plan ? 'var(--accent)' : dl?.color === '#f87171' ? '#f87171' : 'var(--border-2)'
@@ -321,7 +404,7 @@ function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             {slot ? (
-              /* ora din AI plan — DM Sans tabular-nums */
+              /* AI Scheduled Time Slot */
               <span style={{
                 ...numericStyle,
                 fontSize: 13,
@@ -334,7 +417,7 @@ function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
                 {formatTime(slot.start)} → {formatTime(slot.end)}
               </span>
             ) : (
-              /* durata estimata */
+              /* Estimated Duration */
               <span style={{ ...numericStyle, fontSize: 13, color: 'var(--text-2)' }}>
                 {formatMinutes(task.estimate_minutes)}
               </span>
@@ -366,7 +449,16 @@ function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
   )
 }
 
-// ── Completed Task Card ────────────────────────────────
+// ── Completed Task Card Component ────────────────────────────────
+
+/**
+ * Displays a simplified card for a completed task.
+ * 
+ * @param {Object} props - Component props.
+ * @param {Task} props.task - The completed task.
+ * @param {() => void} props.onReopen - Callback to reopen the task.
+ * @param {() => void} props.onClick - Callback when the card is clicked.
+ */
 function CompletedCard({ task, onReopen, onClick }: { task: Task; onReopen: () => void; onClick: () => void }) {
   return (
     <div className="card fade-in" onClick={onClick}
@@ -390,10 +482,20 @@ function CompletedCard({ task, onReopen, onClick }: { task: Task; onReopen: () =
   )
 }
 
-// ── Main Export ────────────────────────────────────────
+// ── Main TaskList Component ────────────────────────────────────────
+
+/**
+ * The main container for displaying the list of tasks.
+ * Handles grouping, collapsing sections, and managing the selected task modal.
+ * 
+ * @param {Props} props - Component props.
+ * @returns {JSX.Element} The rendered task list.
+ */
 export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
   const [selectedTask,  setSelectedTask]  = useState<Task | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
+  
+  // Manage collapsed state for specific groups (Later, Tomorrow)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
     '🗓 Later': true,
     '📅 Tomorrow': false,
@@ -405,6 +507,7 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
   async function handleComplete(id: string) { await onUpdate(id, { completed: true }) }
   async function handleReopen(id: string)   { await onUpdate(id, { completed: false }) }
 
+  // Groups that should always remain expanded
   const alwaysOpen = ['⚠ Overdue', '📌 Today', '◎ No deadline']
 
   function toggleCollapse(label: string) {
@@ -427,6 +530,7 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+        {/* Empty State for Active Tasks */}
         {activeTasks.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-2)' }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>🎉</div>
@@ -434,12 +538,14 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
             <p style={{ fontSize: 12, marginTop: 4, color: 'var(--text-3)' }}>No active tasks remaining</p>
           </div>
         ) : (
+          // Render Task Groups
           groups.map(group => {
             const isCollapsible = !alwaysOpen.includes(group.label)
             const isCollapsed   = isCollapsible && collapsed[group.label]
 
             return (
               <div key={group.label}>
+                {/* Group Header */}
                 <div
                   onClick={() => isCollapsible && toggleCollapse(group.label)}
                   style={{
@@ -466,6 +572,7 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
                   </span>
                 </div>
 
+                {/* Group Tasks */}
                 {!isCollapsed && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {group.tasks.map(task => (
@@ -478,6 +585,7 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
           })
         )}
 
+        {/* Completed Tasks Section */}
         {completedTasks.length > 0 && (
           <div>
             <div
@@ -519,6 +627,7 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
         )}
       </div>
 
+      {/* Task Detail Modal */}
       {selectedTask && (
         <TaskModal
           task={selectedTask}

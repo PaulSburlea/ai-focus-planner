@@ -4,7 +4,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Tokens ──────────────────────────────────────────── */
+/* ── Design Tokens ──────────────────────────────────────────── */
+/* 
+   Defines the color palette and shadow variables for both Dark and Light themes.
+   These variables are used throughout the application to ensure consistency.
+*/
+
 [data-theme="dark"] {
   --bg:          #080b0f;
   --surface:     #0e1217;
@@ -51,7 +56,7 @@
   --shadow-lg:   0 8px 40px rgba(0,0,0,0.12);
 }
 
-/* ── Reset ───────────────────────────────────────────── */
+/* ── Global Reset & Base Styles ─────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 
@@ -67,7 +72,8 @@ body {
   transition: background 0.3s, color 0.3s;
 }
 
-/* ── Cards ───────────────────────────────────────────── */
+/* ── Card Components ────────────────────────────────────────── */
+/* Standard card container used for tasks, forms, and sections */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -79,6 +85,7 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
+/* Special card style for the AI Plan result */
 .card-ai {
   background: var(--surface);
   border: 1px solid var(--accent);
@@ -86,7 +93,7 @@ body {
   box-shadow: 0 0 0 1px var(--accent-dim), var(--shadow);
 }
 
-/* ── Inputs ──────────────────────────────────────────── */
+/* ── Form Inputs ────────────────────────────────────────────── */
 .input-field {
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -110,6 +117,7 @@ body {
 }
 textarea.input-field { resize: none; line-height: 1.6; }
 
+/* Ensure date/time pickers respect the theme's color scheme */
 .input-field[type="date"],
 .input-field[type="time"],
 .input-field[type="datetime-local"] { color-scheme: dark; }
@@ -117,7 +125,7 @@ textarea.input-field { resize: none; line-height: 1.6; }
 [data-theme="light"] .input-field[type="time"],
 [data-theme="light"] .input-field[type="datetime-local"] { color-scheme: light; }
 
-/* ── Labels ──────────────────────────────────────────── */
+/* ── Form Labels ────────────────────────────────────────────── */
 .field-label {
   font-size: 11px;
   font-weight: 600;
@@ -128,7 +136,8 @@ textarea.input-field { resize: none; line-height: 1.6; }
   display: block;
 }
 
-/* ── Buttons ─────────────────────────────────────────── */
+/* ── Buttons ────────────────────────────────────────────────── */
+/* Primary action button (e.g., Submit, Save) */
 .btn-primary {
   background: var(--accent);
   color: var(--accent-fg);
@@ -156,6 +165,7 @@ textarea.input-field { resize: none; line-height: 1.6; }
   box-shadow: none;
 }
 
+/* Secondary/Ghost button (e.g., Cancel, Edit) */
 .btn-ghost {
   background: transparent;
   color: var(--text-2);
@@ -175,6 +185,7 @@ textarea.input-field { resize: none; line-height: 1.6; }
   background: var(--surface-2);
 }
 
+/* Icon-only button (e.g., Close modal) */
 .btn-icon {
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -196,7 +207,8 @@ textarea.input-field { resize: none; line-height: 1.6; }
   background: var(--surface-3);
 }
 
-/* ── Preset pills ────────────────────────────────────── */
+/* ── Preset Pills ───────────────────────────────────────────── */
+/* Used for quick duration selection */
 .preset-btn {
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -222,7 +234,7 @@ textarea.input-field { resize: none; line-height: 1.6; }
   background: var(--accent);
 }
 
-/* ── Badge ───────────────────────────────────────────── */
+/* ── Badges ─────────────────────────────────────────────────── */
 .badge {
   font-family: 'DM Sans', sans-serif;
   font-variant-numeric: tabular-nums;
@@ -240,7 +252,7 @@ textarea.input-field { resize: none; line-height: 1.6; }
   background: var(--accent-dim);
 }
 
-/* ── Slot row (AI plan card) ─────────────────────────── */
+/* ── AI Plan Slot Row ───────────────────────────────────────── */
 .slot-row {
   display: flex;
   align-items: center;
@@ -253,7 +265,7 @@ textarea.input-field { resize: none; line-height: 1.6; }
 }
 .slot-row:hover { border-color: var(--border-2); }
 
-/* ── Animations ──────────────────────────────────────── */
+/* ── Animations ─────────────────────────────────────────────── */
 .fade-in { animation: fadeIn 0.22s ease forwards; }
 
 @keyframes fadeIn {
@@ -268,12 +280,12 @@ textarea.input-field { resize: none; line-height: 1.6; }
   to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
 
-/* ── Scrollbar ───────────────────────────────────────── */
+/* ── Custom Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 4px; }
 
-/* ── Layout grid ─────────────────────────────────────── */
+/* ── Layout Grid ────────────────────────────────────────────── */
 .main-grid {
   display: grid;
   grid-template-columns: 440px 1fr;
@@ -286,20 +298,20 @@ textarea.input-field { resize: none; line-height: 1.6; }
   .form-sticky { position: static !important; }
 }
 
-/* Header responsive — colapsare treptata */
+/* ── Responsive Header Behavior ─────────────────────────────── */
 
-/* sub 680px: ascunde stats pill */
+/* Below 680px: Hide the stats pill */
 @media (max-width: 680px) {
   .header-stats { display: none !important; }
 }
 
-/* sub 560px: ascunde theme toggle si divider */
+/* Below 560px: Hide theme toggle and divider */
 @media (max-width: 560px) {
   .header-theme-btn { display: none !important; }
   .header-divider   { display: none !important; }
 }
 
-/* sub 420px: ascunde textul din butonul Optimize, ramane doar iconita ✦ */
+/* Below 420px: Hide text in Optimize button and Logo, keep only icons */
 @media (max-width: 420px) {
   .btn-optimize-text  { display: none !important; }
   .header-logo-text   { display: none !important; }
@@ -309,7 +321,7 @@ textarea.input-field { resize: none; line-height: 1.6; }
   .main-wrap { padding: 20px 16px !important; }
 }
 
-/* ── Typography helpers ──────────────────────────────── */
+/* ── Typography Helpers ─────────────────────────────────────── */
 .font-display {
   font-family: 'Syne', sans-serif;
 }
