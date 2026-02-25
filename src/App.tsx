@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react'
+import type { Session } from '@supabase/supabase-js'
+import { supabase } from './lib/supabaseClient'
+import Auth from './components/Auth'
 import TaskForm from './components/TaskForm'
 import TaskList from './components/TaskList'
 import AiPlanCard from './components/AiPlanCard'
@@ -8,15 +11,38 @@ import type { Task, AiPlan, Toast } from './types'
 type Theme = 'dark' | 'light'
 
 export default function App() {
-  const [tasks,     setTasks]  = useState<Task[]>([])
-  const [aiPlan,    setAiPlan] = useState<AiPlan | null>(null)
-  const [loading,   setLoading]= useState(false)
-  const [optimizing,setOpt]    = useState(false)
-  const [toast,     setToast]  = useState<Toast | null>(null)
-  const [theme,     setTheme]  = useState<Theme>('dark')
+  const [session,   setSession]  = useState<Session | null>(null)
+  const [authReady, setAuthReady]= useState(false)
+  const [tasks,     setTasks]    = useState<Task[]>([])
+  const [aiPlan,    setAiPlan]   = useState<AiPlan | null>(null)
+  const [loading,   setLoading]  = useState(false)
+  const [optimizing,setOpt]      = useState(false)
+  const [toast,     setToast]    = useState<Toast | null>(null)
+  const [theme,     setTheme]    = useState<Theme>('dark')
 
-  useEffect(() => { loadTasks() }, [])
-  useEffect(() => { document.documentElement.setAttribute('data-theme', theme) }, [theme])
+  useEffect(() => {
+    // Verifică sesiunea curentă
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      setAuthReady(true)
+    })
+
+    // Ascultă schimbări de auth
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      if (!session) setTasks([])
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (session) loadTasks()
+  }, [session])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   function showToast(message: string, type: 'success' | 'error' = 'success') {
     setToast({ message, type })
@@ -30,7 +56,7 @@ export default function App() {
     setLoading(false)
   }
 
-  async function handleAddTask(task: Omit<Task, 'id' | 'created_at' | 'ai_plan'>) {
+  async function handleAddTask(task: Omit<Task, 'id' | 'created_at' | 'ai_plan' | 'user_id'>) {
     try { const t = await createTask(task); setTasks(p => [t, ...p]); showToast('Task added') }
     catch { showToast('Failed to add task', 'error') }
   }
@@ -53,42 +79,49 @@ export default function App() {
     setOpt(false)
   }
 
-async function handleAcceptPlan() {
-  if (!aiPlan || !tasks.length) return
-  try {
-    const plannedIds = new Set(aiPlan.ordered_task_ids)
-
-    await Promise.all(
-      tasks
-        .filter(t => plannedIds.has(t.id))
-        .map(t => updateTask(t.id, { ai_plan: aiPlan }))
-    )
-
-    const reordered = [
-      ...aiPlan.ordered_task_ids
-        .map(id => tasks.find(t => t.id === id))
-        .filter(Boolean),
-      ...tasks.filter(t => !plannedIds.has(t.id))
-    ] as Task[]
-
-    setTasks(reordered)
-    showToast('Plan applied — tasks reordered!')
-    setAiPlan(null)
-  } catch {
-    showToast('Failed to save plan', 'error')
+  async function handleAcceptPlan() {
+    if (!aiPlan || !tasks.length) return
+    try {
+      const plannedIds = new Set(aiPlan.ordered_task_ids)
+      await Promise.all(
+        tasks.filter(t => plannedIds.has(t.id)).map(t => updateTask(t.id, { ai_plan: aiPlan }))
+      )
+      const reordered = [
+        ...aiPlan.ordered_task_ids.map(id => tasks.find(t => t.id === id)).filter(Boolean),
+        ...tasks.filter(t => !plannedIds.has(t.id))
+      ] as Task[]
+      setTasks(reordered)
+      showToast('Plan applied!')
+      setAiPlan(null)
+    } catch { showToast('Failed to save plan', 'error') }
   }
-}
 
-  const todayTasks = tasks.filter(t => {
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    showToast('Signed out')
+  }
+
+  const todayTasks   = tasks.filter(t => {
     if (!t.deadline) return false
-    const d = new Date(t.deadline)
-    const now = new Date()
+    const d = new Date(t.deadline); const now = new Date()
     return d.getFullYear() === now.getFullYear() &&
-          d.getMonth()    === now.getMonth() &&
-          d.getDate()     === now.getDate()
+           d.getMonth()    === now.getMonth() &&
+           d.getDate()     === now.getDate()
   })
   const todayMinutes = todayTasks.reduce((s, t) => s + t.estimate_minutes, 0)
   const todayHours   = (todayMinutes / 60).toFixed(1)
+
+  // Loading auth
+  if (!authReady) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ color: 'var(--text-2)', fontSize: 13 }}>Loading...</span>
+      </div>
+    )
+  }
+
+  // Not logged in
+  if (!session) return <Auth />
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -97,23 +130,14 @@ async function handleAcceptPlan() {
       <header style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface)', position: 'sticky', top: 0, zIndex: 50, boxShadow: 'var(--shadow-sm)' }}>
         <div className="header-inner" style={{ maxWidth: 1080, margin: '0 auto', padding: '0 24px', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
 
-          {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <img src="/logo.png" alt="" style={{ height: 26 }} onError={e => (e.currentTarget.style.display = 'none')} />
             <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Focus Planner</span>
             <span className="badge badge-accent" style={{ fontSize: 10 }}>AI</span>
           </div>
 
-          {/* Right */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-
-            {/* Stats — mai rafinate */}
-            <div className="header-stats" style={{
-              display: 'flex', alignItems: 'center', gap: 0,
-              background: 'var(--surface-2)',
-              border: '1px solid var(--border)',
-              borderRadius: 10, overflow: 'hidden'
-            }}>
+            <div className="header-stats" style={{ display: 'flex', alignItems: 'center', gap: 0, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
               <div style={{ padding: '6px 14px', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', fontFamily: 'Fira Code, monospace', lineHeight: 1 }}>{todayTasks.length}</span>
                 <span style={{ fontSize: 9, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>today</span>
@@ -124,56 +148,44 @@ async function handleAcceptPlan() {
               </div>
             </div>
 
-            {/* Divider */}
             <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
 
-            {/* Theme toggle */}
-            <button
-              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
-              className="btn-icon"
-              title="Toggle theme"
-              style={{ fontSize: 14 }}
-            >
+            {/* User email */}
+            <span style={{ fontSize: 12, color: 'var(--text-2)', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {session.user.email}
+            </span>
+
+            <button onClick={handleSignOut} className="btn-ghost" style={{ fontSize: 12, padding: '7px 12px' }}>
+              Sign out
+            </button>
+
+            <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
+
+            <button onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} className="btn-icon" style={{ fontSize: 14 }}>
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
 
-            {/* Optimize CTA */}
-            <button
-              onClick={handleOptimize}
-              disabled={optimizing}
-              className="btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px' }}
-            >
-              {optimizing ? (
-                <>
-                  <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: 13 }}>◌</span>
-                  <span>Thinking...</span>
-                </>
-              ) : (
-                <>
-                  <span style={{ fontSize: 13 }}>✦</span>
-                  <span>Optimize my day</span>
-                </>
-              )}
+            <button onClick={handleOptimize} disabled={optimizing} className="btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px' }}>
+              {optimizing
+                ? <><span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: 13 }}>◌</span><span>Thinking...</span></>
+                : <><span style={{ fontSize: 13 }}>✦</span><span>Optimize my day</span></>
+              }
             </button>
           </div>
         </div>
       </header>
 
       {/* Main */}
-      <main className="main-wrap" style={{ maxWidth: 1080, margin: '0 auto', padding: '36px 28px' }}>
+      <main className="main-wrap" style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 24px' }}>
         <div className="main-grid">
-
-          {/* Left */}
           <div className="form-sticky" style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 76 }}>
             <TaskForm onTaskAdded={handleAddTask} />
-
-            {/* Stats */}
-            <div className="card" style={{ padding: '18px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
+            <div className="card" style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
               {[
-                { label: 'Tasks', value: tasks.length },
-                { label: 'Hours', value: `${todayHours}h` },
-                { label: 'Mins',  value: todayMinutes },
+                { label: 'Today',  value: todayTasks.length },
+                { label: 'Hours',  value: `${todayHours}h` },
+                { label: 'Mins',   value: todayMinutes },
               ].map((s, i) => (
                 <div key={i} style={{ textAlign: 'center', borderRight: i < 2 ? '1px solid var(--border)' : 'none', padding: '4px 8px' }}>
                   <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--accent)', fontFamily: 'Fira Code, monospace', lineHeight: 1.2 }}>{s.value}</p>
@@ -183,7 +195,6 @@ async function handleAcceptPlan() {
             </div>
           </div>
 
-          {/* Right */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {aiPlan && (
               <div className="fade-in">
@@ -198,7 +209,6 @@ async function handleAcceptPlan() {
         </div>
       </main>
 
-      {/* Toast */}
       {toast && (
         <div className="fade-in" style={{
           position: 'fixed', bottom: 24, right: 24, zIndex: 100,

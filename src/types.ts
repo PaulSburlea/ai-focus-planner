@@ -1,5 +1,6 @@
 export interface Task {
   id: string
+  user_id: string
   title: string
   estimate_minutes: number
   deadline: string | null
@@ -24,4 +25,9 @@ export interface AiPlan {
 export interface Toast {
   message: string
   type: 'success' | 'error'
+}
+
+export interface User {
+  id: string
+  email: string | undefined
 }
