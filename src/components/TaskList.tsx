@@ -41,10 +41,10 @@ function groupTasksByDay(tasks: Task[]) {
   tasks.forEach(t => {
     if (!t.deadline) { noDeadline.push(t); return }
     const d = new Date(t.deadline); d.setHours(0,0,0,0)
-    if (d < today)                           pastTasks.push(t)
-    else if (d.getTime() === today.getTime()) todayTasks.push(t)
-    else if (d.getTime() === tomorrow.getTime()) tomorrowTasks.push(t)
-    else                                     laterTasks.push(t)
+    if (d < today)                               pastTasks.push(t)
+    else if (d.getTime() === today.getTime())     todayTasks.push(t)
+    else if (d.getTime() === tomorrow.getTime())  tomorrowTasks.push(t)
+    else                                         laterTasks.push(t)
   })
 
   if (pastTasks.length)     groups.push({ label: '⚠ Overdue',    tasks: pastTasks })
@@ -56,6 +56,14 @@ function groupTasksByDay(tasks: Task[]) {
   return groups
 }
 
+// ── stilul numeric comun — DM Sans + tabular-nums ─────
+const numericStyle: React.CSSProperties = {
+  fontFamily: 'DM Sans, sans-serif',
+  fontVariantNumeric: 'tabular-nums',
+  fontWeight: 600,
+  letterSpacing: '-0.01em',
+}
+
 // ── Modal ──────────────────────────────────────────────
 function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
   task: Task
@@ -64,14 +72,14 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
   onDelete: (id: string) => Promise<void>
   onComplete: (id: string) => Promise<void>
 }) {
-  const [editing,  setEditing]  = useState(false)
-  const [title,    setTitle]    = useState(task.title)
-  const [estimate, setEstimate] = useState(String(task.estimate_minutes))
+  const [editing,    setEditing]    = useState(false)
+  const [title,      setTitle]      = useState(task.title)
+  const [estimate,   setEstimate]   = useState(String(task.estimate_minutes))
   const [deadlineDate, setDeadlineDate] = useState(task.deadline ? new Date(task.deadline).toISOString().split('T')[0] : '')
   const [deadlineTime, setDeadlineTime] = useState(task.deadline ? new Date(task.deadline).toTimeString().slice(0,5) : '09:00')
-  const [notes,    setNotes]    = useState(task.notes || '')
-  const [saving,   setSaving]   = useState(false)
-  const [deleting, setDeleting] = useState(false)
+  const [notes,      setNotes]      = useState(task.notes || '')
+  const [saving,     setSaving]     = useState(false)
+  const [deleting,   setDeleting]   = useState(false)
   const [completing, setCompleting] = useState(false)
 
   const dl = task.deadline ? getDeadlineInfo(task.deadline) : null
@@ -180,7 +188,7 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 13, width: 18, textAlign: 'center', opacity: 0.5 }}>⏱</span>
                   <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Duration</span>
-                  <span style={{ marginLeft: 'auto', fontFamily: 'DM Mono, monospace', fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>
+                  <span style={{ marginLeft: 'auto', ...numericStyle, fontSize: 13, color: 'var(--text)' }}>
                     {formatMinutes(task.estimate_minutes)}
                   </span>
                 </div>
@@ -195,7 +203,7 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
                           {dl.tag.toUpperCase()}
                         </span>
                       )}
-                      <span style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, color: dl.color }}>{dl.str}</span>
+                      <span style={{ ...numericStyle, fontSize: 13, color: dl.color }}>{dl.str}</span>
                     </div>
                   </div>
                 )}
@@ -221,7 +229,6 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
 
               {/* Actions */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {/* Mark as done — buton principal verde */}
                 <button
                   onClick={handleComplete}
                   disabled={completing}
@@ -287,11 +294,21 @@ function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             {slot ? (
-              <span style={{ fontSize: 12, fontFamily: 'DM Mono, monospace', fontWeight: 600, color: 'var(--accent)', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: 5, padding: '1px 7px' }}>
+              /* ora din AI plan — DM Sans tabular-nums */
+              <span style={{
+                ...numericStyle,
+                fontSize: 13,
+                color: 'var(--accent)',
+                background: 'var(--accent-dim)',
+                border: '1px solid var(--accent)',
+                borderRadius: 5,
+                padding: '1px 7px'
+              }}>
                 {formatTime(slot.start)} → {formatTime(slot.end)}
               </span>
             ) : (
-              <span style={{ fontSize: 12, color: 'var(--text-2)', fontFamily: 'DM Mono, monospace' }}>
+              /* durata estimata */
+              <span style={{ ...numericStyle, fontSize: 13, color: 'var(--text-2)' }}>
                 {formatMinutes(task.estimate_minutes)}
               </span>
             )}
@@ -348,7 +365,7 @@ function CompletedCard({ task, onReopen, onClick }: { task: Task; onReopen: () =
 
 // ── Main Export ────────────────────────────────────────
 export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [selectedTask,  setSelectedTask]  = useState<Task | null>(null)
   const [showCompleted, setShowCompleted] = useState(false)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
     '🗓 Later': true,
@@ -358,13 +375,8 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
   const activeTasks    = tasks.filter(t => !t.completed)
   const completedTasks = tasks.filter(t => t.completed)
 
-  async function handleComplete(id: string) {
-    await onUpdate(id, { completed: true })
-  }
-
-  async function handleReopen(id: string) {
-    await onUpdate(id, { completed: false })
-  }
+  async function handleComplete(id: string) { await onUpdate(id, { completed: true }) }
+  async function handleReopen(id: string)   { await onUpdate(id, { completed: false }) }
 
   const alwaysOpen = ['⚠ Overdue', '📌 Today', '◎ No deadline']
 
@@ -388,7 +400,6 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* Active tasks groups */}
         {activeTasks.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-2)' }}>
             <div style={{ fontSize: 28, marginBottom: 8 }}>🎉</div>
@@ -398,7 +409,7 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
         ) : (
           groups.map(group => {
             const isCollapsible = !alwaysOpen.includes(group.label)
-            const isCollapsed = isCollapsible && collapsed[group.label]
+            const isCollapsed   = isCollapsible && collapsed[group.label]
 
             return (
               <div key={group.label}>
@@ -416,7 +427,7 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
                 >
                   <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)' }}>{group.label}</span>
                   <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: 6 }}>
                     {group.tasks.length}
                     {isCollapsible && (
                       <span style={{
@@ -440,7 +451,6 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
           })
         )}
 
-        {/* Completed section */}
         {completedTasks.length > 0 && (
           <div>
             <div
@@ -456,7 +466,7 @@ export default function TaskList({ tasks, onDelete, onUpdate }: Props) {
             >
               <span style={{ fontSize: 12, fontWeight: 600, color: '#16a34a' }}>✓ Completed</span>
               <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-              <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'DM Mono, monospace', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, color: 'var(--text-3)', fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {completedTasks.length}
                 <span style={{
                   fontSize: 14, color: '#16a34a',
