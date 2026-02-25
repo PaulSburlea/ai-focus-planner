@@ -25,7 +25,14 @@ export function safeParseJson(text: string) {
 }
 
 export function buildPrompt(tasks: TaskInput[]) {
-  const dateStr = new Date().toISOString().split('T')[0]
+  const now = new Date()
+  const dateStr = now.toISOString().split('T')[0]
+
+  // Round up to next 15-minute mark so slots look clean (e.g. 13:41 → 13:45)
+  const minutes = now.getMinutes()
+  const roundedMinutes = Math.ceil(minutes / 15) * 15
+  now.setMinutes(roundedMinutes, 0, 0)
+  const currentTimeStr = now.toTimeString().slice(0, 5) // "13:45"
 
   const taskList = tasks.map(t => ({
     id: t.id,
@@ -48,10 +55,12 @@ The JSON must exactly match this schema:
 Rules:
 - Use ISO 8601 format for start/end times
 - Working hours are 09:00 to 18:00 with a 30min lunch break at 13:00
+- Current time is ${currentTimeStr}. Schedule tasks starting from now, never in the past
+- If current time is past 18:00, return empty slots and mention in rationale that the workday is over
 - Prioritize tasks with earlier deadlines
 - Do not schedule overlapping slots
 - Skip tasks that don't fit in remaining working hours and mention them in rationale`,
-    user: JSON.stringify({ date: dateStr, tasks: taskList })
+    user: JSON.stringify({ date: dateStr, current_time: currentTimeStr, tasks: taskList })
   }
 }
 
