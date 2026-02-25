@@ -1,7 +1,12 @@
 import OpenAI from 'openai'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { createClient } from '@supabase/supabase-js'
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+const supabase = createClient(
+  process.env.VITE_SUPABASE_URL!,
+  process.env.SUPABASE_SECRET_KEY!
+)
 
 interface TaskInput {
   id: string
@@ -51,44 +56,65 @@ Rules:
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  // CORS
+  const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:3000'
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin)
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
 
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
+  // Auth
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+  const token = authHeader.replace('Bearer ', '')
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  if (authError || !user) {
+    return res.status(401).json({ error: 'Unauthorized' })
+  }
+
+  // Validate body
   const { tasks } = req.body
   if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
     return res.status(400).json({ error: 'No tasks provided' })
   }
 
   try {
-    const { system, user } = buildPrompt(tasks as TaskInput[])
+    const { system, user: userPrompt } = buildPrompt(tasks as TaskInput[])
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       temperature: 0.3,
       messages: [
         { role: 'system', content: system },
-        { role: 'user',   content: user },
+        { role: 'user',   content: userPrompt },
       ],
     })
 
     const raw = completion.choices[0].message.content ?? ''
-    console.log('[optimize] raw LLM output:', raw)
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('[optimize] raw LLM output:', raw)
+    }
 
     const parsed = safeParseJson(raw)
 
     if (!parsed?.ordered_task_ids || !parsed?.slots || !parsed?.rationale) {
-      console.error('[optimize] invalid JSON from LLM:', raw)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[optimize] invalid JSON from LLM:', raw)
+      }
       return res.status(500).json({ error: 'Invalid response from AI. Please try again.' })
     }
 
     return res.status(200).json(parsed)
 
   } catch (err) {
-    console.error('[optimize] error:', err)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[optimize] error:', err)
+    }
     return res.status(500).json({ error: 'AI optimization failed.' })
   }
 }

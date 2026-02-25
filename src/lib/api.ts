@@ -42,11 +42,17 @@ export async function deleteTask(id: string): Promise<void> {
 }
 
 export async function optimizeDay(tasks: Task[]): Promise<AiPlan> {
+  const { data: { session } } = await supabase.auth.getSession()
+
   const res = await fetch('/api/optimize', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session?.access_token ?? ''}`
+    },
     body: JSON.stringify({ tasks })
   })
+
   if (!res.ok) throw new Error('Optimize failed')
   return res.json()
 }
