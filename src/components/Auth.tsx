@@ -28,16 +28,15 @@ export default function Auth() {
 
     setLoading(false)
   }
-  
-async function handleGoogle() {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${window.location.origin}/`
-    }
-  })
-  if (error) setError(error.message)
-}
+
+
+  async function handleGoogle() {
+        const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+        })
+        if (error) setError(error.message)
+  }
 
   return (
     <div style={{
