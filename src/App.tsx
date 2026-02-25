@@ -77,30 +77,35 @@ const [theme, setTheme] = useState<Theme>(() => {
     setOpt(false)
   }
 
-  async function handleAcceptPlan() {
-    if (!aiPlan || !tasks.length) return
-    try {
-      const plannedIds = new Set(aiPlan.ordered_task_ids)
+async function handleAcceptPlan() {
+  if (!aiPlan || !tasks.length) return
+  try {
+    const plannedIds = new Set(aiPlan.ordered_task_ids)
 
-      const reordered = [
-        ...aiPlan.ordered_task_ids
-          .map(id => tasks.find(t => t.id === id))
-          .filter(Boolean),
-        ...tasks.filter(t => !plannedIds.has(t.id))
-      ] as Task[]
+    const reordered = [
+      ...aiPlan.ordered_task_ids
+        .map(id => tasks.find(t => t.id === id))
+        .filter(Boolean),
+      ...tasks.filter(t => !plannedIds.has(t.id))
+    ] as Task[]
 
-      await Promise.all(
-        reordered.map((t, i) => updateTask(t.id, {
-          sort_order: i,
-          ...(plannedIds.has(t.id) ? { ai_plan: aiPlan } : {})
-        }))
-      )
+    await Promise.all(
+      reordered.map((t, i) => updateTask(t.id, {
+        sort_order: i,
+        ...(plannedIds.has(t.id) ? { ai_plan: aiPlan } : {})
+      }))
+    )
 
-      setTasks(reordered)
-      showToast('Plan applied!')
-      setAiPlan(null)
-    } catch { showToast('Failed to save plan', 'error') }
-  }
+    setTasks(reordered.map((t, i) => ({
+      ...t,
+      sort_order: i,
+      ...(plannedIds.has(t.id) ? { ai_plan: aiPlan } : {})
+    })))
+
+    showToast('Plan applied!')
+    setAiPlan(null)
+  } catch { showToast('Failed to save plan', 'error') }
+}
 
   async function handleSignOut() {
     await supabase.auth.signOut()
