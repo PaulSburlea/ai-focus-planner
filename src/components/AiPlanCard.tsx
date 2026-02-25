@@ -22,8 +22,13 @@ export default function AiPlanCard({ plan, tasks, onAccept, onReject }: Props) {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--accent-glow)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'var(--accent)' }}>✦</div>
-          <span style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>AI Plan</span>
+          <div style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: 'var(--accent-glow)', border: '1px solid var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, color: 'var(--accent)'
+          }}>✦</div>
+          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>AI Plan</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onAccept} className="btn-primary" style={{ fontSize: 12, padding: '7px 16px' }}>Accept & Save</button>
@@ -33,10 +38,10 @@ export default function AiPlanCard({ plan, tasks, onAccept, onReject }: Props) {
 
       {/* Rationale */}
       <div style={{
-        background: 'var(--accent-glow)',
-        border: '1px solid rgba(167,139,250,0.2)',
+        background: 'var(--accent-dim)',
+        border: '1px solid var(--accent)',
         borderRadius: 10, padding: '12px 16px',
-        fontSize: 13, color: 'var(--muted)',
+        fontSize: 13, color: 'var(--text-2)',   // era var(--muted)
         marginBottom: 20, lineHeight: 1.6
       }}>
         {plan.rationale}
@@ -45,24 +50,40 @@ export default function AiPlanCard({ plan, tasks, onAccept, onReject }: Props) {
       {/* Schedule */}
       {plan.slots && plan.slots.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <p style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'JetBrains Mono, monospace', marginBottom: 10 }}>Schedule</p>
+          <p style={{
+            fontSize: 11, color: 'var(--text-2)',   // era var(--muted)
+            textTransform: 'uppercase', letterSpacing: '0.08em',
+            fontFamily: 'Fira Code, monospace', marginBottom: 10
+          }}>Schedule</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {plan.slots.map((slot, i) => (
-              <div key={i} className="slot-card">
-                <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 12, color: 'var(--accent)', minWidth: 100 }}>
+              <div key={i} className="slot-row">   {/* era slot-card */}
+                <div style={{
+                  fontFamily: 'Fira Code, monospace', fontSize: 12,
+                  color: 'var(--accent)', minWidth: 100
+                }}>
                   {formatTime(slot.start)} → {formatTime(slot.end)}
                 </div>
-                <div style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>{getTaskTitle(slot.taskId)}</div>
-                <span style={{ fontSize: 11, color: 'var(--muted)', fontFamily: 'JetBrains Mono, monospace' }}>#{i + 1}</span>
+                <div style={{ flex: 1, fontSize: 13, color: 'var(--text)' }}>
+                  {getTaskTitle(slot.taskId)}
+                </div>
+                <span style={{
+                  fontSize: 11, color: 'var(--text-2)',   // era var(--muted)
+                  fontFamily: 'Fira Code, monospace'
+                }}>#{i + 1}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Order */}
+      {/* Priority order */}
       <div>
-        <p style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'JetBrains Mono, monospace', marginBottom: 10 }}>Priority</p>
+        <p style={{
+          fontSize: 11, color: 'var(--text-2)',   // era var(--muted)
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+          fontFamily: 'Fira Code, monospace', marginBottom: 10
+        }}>Priority</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {plan.ordered_task_ids.map((id, i) => (
             <span key={id} style={{
@@ -70,7 +91,10 @@ export default function AiPlanCard({ plan, tasks, onAccept, onReject }: Props) {
               background: 'var(--surface-2)', border: '1px solid var(--border)',
               color: 'var(--text)', fontWeight: 400
             }}>
-              <span style={{ color: 'var(--accent)', marginRight: 6, fontFamily: 'JetBrains Mono, monospace' }}>{i + 1}.</span>
+              <span style={{
+                color: 'var(--accent)', marginRight: 6,
+                fontFamily: 'Fira Code, monospace'
+              }}>{i + 1}.</span>
               {getTaskTitle(id)}
             </span>
           ))}
