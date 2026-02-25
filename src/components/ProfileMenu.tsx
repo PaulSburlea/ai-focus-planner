@@ -79,9 +79,6 @@ export default function ProfileMenu({ session, tasks, onSignOut }: Props) {
                 <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {session.user.email}
                 </p>
-                <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
-                  Free plan
-                </p>
               </div>
             </div>
           </div>
