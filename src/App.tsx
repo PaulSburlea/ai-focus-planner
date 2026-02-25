@@ -19,10 +19,10 @@ export default function App() {
   const [loading,    setLoading]  = useState(false)
   const [optimizing, setOpt]      = useState(false)
   const [toast,      setToast]    = useState<Toast | null>(null)
-const [theme, setTheme] = useState<Theme>(() => {
-  return (localStorage.getItem('theme') as Theme) || 'dark'
-})
-  const [view,       setView]     = useState<'today' | 'past'>('today')
+  const [theme, setTheme] = useState<Theme>(() => {
+    return (localStorage.getItem('theme') as Theme) || 'dark'
+  })
+  const [view, setView] = useState<'today' | 'past'>('today')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -77,35 +77,32 @@ const [theme, setTheme] = useState<Theme>(() => {
     setOpt(false)
   }
 
-async function handleAcceptPlan() {
-  if (!aiPlan || !tasks.length) return
-  try {
-    const plannedIds = new Set(aiPlan.ordered_task_ids)
+  async function handleAcceptPlan() {
+    if (!aiPlan || !tasks.length) return
+    try {
+      const plannedIds = new Set(aiPlan.ordered_task_ids)
+      const reordered = [
+        ...aiPlan.ordered_task_ids.map(id => tasks.find(t => t.id === id)).filter(Boolean),
+        ...tasks.filter(t => !plannedIds.has(t.id))
+      ] as Task[]
 
-    const reordered = [
-      ...aiPlan.ordered_task_ids
-        .map(id => tasks.find(t => t.id === id))
-        .filter(Boolean),
-      ...tasks.filter(t => !plannedIds.has(t.id))
-    ] as Task[]
+      await Promise.all(
+        reordered.map((t, i) => updateTask(t.id, {
+          sort_order: i,
+          ...(plannedIds.has(t.id) ? { ai_plan: aiPlan } : {})
+        }))
+      )
 
-    await Promise.all(
-      reordered.map((t, i) => updateTask(t.id, {
+      setTasks(reordered.map((t, i) => ({
+        ...t,
         sort_order: i,
         ...(plannedIds.has(t.id) ? { ai_plan: aiPlan } : {})
-      }))
-    )
+      })))
 
-    setTasks(reordered.map((t, i) => ({
-      ...t,
-      sort_order: i,
-      ...(plannedIds.has(t.id) ? { ai_plan: aiPlan } : {})
-    })))
-
-    showToast('Plan applied!')
-    setAiPlan(null)
-  } catch { showToast('Failed to save plan', 'error') }
-}
+      showToast('Plan applied!')
+      setAiPlan(null)
+    } catch { showToast('Failed to save plan', 'error') }
+  }
 
   async function handleSignOut() {
     await supabase.auth.signOut()
@@ -115,25 +112,39 @@ async function handleAcceptPlan() {
   // ── Stats ──
   const today = new Date(); today.setHours(0, 0, 0, 0)
 
-  const todayOnlyTasks = tasks.filter(t => {
+  const activeTasks    = tasks.filter(t => !t.completed)
+  const todayActiveTasks = activeTasks.filter(t => {
     if (!t.deadline) return false
     const d = new Date(t.deadline)
-    const now = new Date()
-    return d.getFullYear() === now.getFullYear() &&
-           d.getMonth()    === now.getMonth() &&
-           d.getDate()     === now.getDate()
+    return d.getFullYear() === today.getFullYear() &&
+           d.getMonth()    === today.getMonth() &&
+           d.getDate()     === today.getDate()
   })
-  const todayMinutes = todayOnlyTasks.reduce((s, t) => s + t.estimate_minutes, 0)
+  const todayMinutes = todayActiveTasks.reduce((s, t) => s + t.estimate_minutes, 0)
   const todayHours   = (todayMinutes / 60).toFixed(1)
 
   // ── Filtrare după view ──
+  // Today: tasks active (necompletate) cu deadline azi/viitor sau fara deadline
+  // Past: tasks cu deadline trecut + TOATE taskurile completate
   const filteredTasks = tasks.filter(t => {
-    if (!t.deadline) return view === 'today'
-    const d = new Date(t.deadline); d.setHours(0, 0, 0, 0)
-    return view === 'today' ? d >= today : d < today
+    if (view === 'past') {
+      // deadline in trecut SAU task completat
+      if (t.completed) return true
+      if (!t.deadline) return false
+      const d = new Date(t.deadline); d.setHours(0, 0, 0, 0)
+      return d < today
+    } else {
+      // view === 'today': doar active, deadline azi/viitor sau fara deadline
+      if (t.completed) return false
+      if (!t.deadline) return true
+      const d = new Date(t.deadline); d.setHours(0, 0, 0, 0)
+      return d >= today
+    }
   })
 
-  // ── Auth loading ──
+  const pastCompleted  = filteredTasks.filter(t => t.completed).length
+  const pastIncomplete = filteredTasks.filter(t => !t.completed).length
+
   if (!authReady) {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -148,49 +159,81 @@ async function handleAcceptPlan() {
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
 
       {/* ── Header ── */}
-      <header style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface)', position: 'sticky', top: 0, zIndex: 50, boxShadow: 'var(--shadow-sm)' }}>
-        <div className="header-inner" style={{ maxWidth: 1080, margin: '0 auto', padding: '0 24px', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+      <header style={{
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--surface)',
+        position: 'sticky', top: 0, zIndex: 50,
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        <div style={{
+          maxWidth: 1320, margin: '0 auto',
+          padding: '0 32px', height: 62,
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', gap: 16
+        }}>
 
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <img src="/logo.png" alt="" style={{ height: 26 }} onError={e => (e.currentTarget.style.display = 'none')} />
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Focus Planner</span>
-            <span className="badge badge-accent" style={{ fontSize: 10 }}>AI</span>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: 'var(--accent-dim)', border: '1px solid var(--accent)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13, color: 'var(--accent)'
+            }}>✦</div>
+            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+              Focus Planner
+            </span>
           </div>
 
-          {/* Right */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {/* Right side */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
 
-            {/* Stats */}
-            <div className="header-stats" style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-              <div style={{ padding: '6px 14px', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', fontFamily: 'DM Mono, monospace', lineHeight: 1 }}>{todayOnlyTasks.length}</span>
-                <span style={{ fontSize: 9, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>today</span>
+            {/* Today's summary pill */}
+            <div className="header-stats" style={{
+              display: 'flex', alignItems: 'center', gap: 0,
+              background: 'var(--surface-2)', border: '1px solid var(--border)',
+              borderRadius: 10, overflow: 'hidden', marginRight: 4
+            }}>
+              <div style={{ padding: '0 16px', height: 34, display: 'flex', alignItems: 'center', gap: 6, borderRight: '1px solid var(--border)' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{todayActiveTasks.length}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>tasks today</span>
               </div>
-              <div style={{ padding: '6px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', fontFamily: 'DM Mono, monospace', lineHeight: 1 }}>{todayHours}h</span>
-                <span style={{ fontSize: 9, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginTop: 2 }}>scheduled</span>
+              <div style={{ padding: '0 16px', height: 34, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{todayHours}h</span>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>scheduled</span>
               </div>
             </div>
 
-            <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
-
-            {/* Theme toggle */}
-            <button onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')} className="btn-icon" style={{ fontSize: 14 }}>
+            {/* Theme toggle — same size as avatar (34×34) */}
+            <button
+              onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+              style={{
+                width: 34, height: 34, borderRadius: 10,
+                background: 'var(--surface-2)', border: '1px solid var(--border)',
+                color: 'var(--text-2)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 15, transition: 'all 0.15s', flexShrink: 0
+              }}
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
 
-            {/* Profile menu */}
+            {/* Profile */}
             <ProfileMenu session={session} tasks={tasks} onSignOut={handleSignOut} />
 
-            <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
+            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
 
             {/* Optimize CTA */}
-            <button onClick={handleOptimize} disabled={optimizing} className="btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 18px' }}>
+            <button
+              onClick={handleOptimize}
+              disabled={optimizing}
+              className="btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 18px', height: 34, fontSize: 13 }}
+            >
               {optimizing
-                ? <><span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: 13 }}>◌</span><span>Thinking...</span></>
-                : <><span style={{ fontSize: 13 }}>✦</span><span>Optimize my day</span></>
+                ? <><span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>◌</span><span>Thinking...</span></>
+                : <><span>✦</span><span>Optimize my day</span></>
               }
             </button>
           </div>
@@ -198,19 +241,23 @@ async function handleAcceptPlan() {
       </header>
 
       {/* ── Main ── */}
-      <main className="main-wrap" style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 24px' }}>
+      <main style={{ maxWidth: 1320, margin: '0 auto', padding: '28px 32px' }}>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 4, width: 'fit-content' }}>
+        <div style={{
+          display: 'flex', gap: 4, marginBottom: 24,
+          background: 'var(--surface)', border: '1px solid var(--border)',
+          borderRadius: 12, padding: 4, width: 'fit-content'
+        }}>
           {([
             { key: 'today', label: '📌 Today & Upcoming' },
-            { key: 'past',  label: '🗂 Past tasks' },
+            { key: 'past',  label: '🗂 Past & Completed' },
           ] as const).map(tab => (
             <button
               key={tab.key}
               onClick={() => setView(tab.key)}
               style={{
-                padding: '7px 16px', borderRadius: 9,
+                padding: '7px 18px', borderRadius: 9,
                 fontSize: 13, fontWeight: 500,
                 border: 'none', cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -225,38 +272,35 @@ async function handleAcceptPlan() {
 
         <div className="main-grid">
 
-          {/* Left — form + stats (doar pe Today) */}
-          <div className="form-sticky" style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 84 }}>
+          {/* Left — form + sidebar */}
+          <div className="form-sticky" style={{
+            display: 'flex', flexDirection: 'column', gap: 14,
+            position: 'sticky', top: 78
+          }}>
             {view === 'today' && (
-              <>
-                <TaskForm onTaskAdded={handleAddTask} />
-                <div className="card" style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr' }}>
-                  {[
-                    { label: 'Today',  value: todayOnlyTasks.length },
-                    { label: 'Hours',  value: `${todayHours}h` },
-                    { label: 'Mins',   value: todayMinutes },
-                  ].map((s, i) => (
-                    <div key={i} style={{ textAlign: 'center', borderRight: i < 2 ? '1px solid var(--border)' : 'none', padding: '4px 8px' }}>
-                      <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--accent)', fontFamily: 'DM Mono, monospace', lineHeight: 1.2 }}>{s.value}</p>
-                      <p style={{ fontSize: 10, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.07em', marginTop: 4 }}>{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </>
+              <TaskForm onTaskAdded={handleAddTask} />
             )}
 
             {view === 'past' && (
-              <div className="card" style={{ padding: '20px' }}>
-                <p style={{ fontSize: 11, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Past summary</p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div className="card" style={{ padding: '20px 24px' }}>
+                <p style={{ fontSize: 11, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>
+                  Past summary
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[
-                    { label: 'Past tasks', value: filteredTasks.length },
-                    { label: 'Completed',  value: filteredTasks.filter(t => t.completed).length },
-                    { label: 'Incomplete', value: filteredTasks.filter(t => !t.completed).length },
+                    { label: 'Total',      value: filteredTasks.length },
+                    { label: 'Completed',  value: pastCompleted },
+                    { label: 'Incomplete', value: pastIncomplete },
                   ].map((s, i) => (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 9 }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{s.label}</span>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--accent)', fontFamily: 'DM Mono, monospace' }}>{s.value}</span>
+                    <div key={i} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '9px 14px', background: 'var(--surface-2)', borderRadius: 10
+                    }}>
+                      <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{s.label}</span>
+                      <span style={{
+                        fontSize: 16, fontWeight: 700,
+                        color: 'var(--accent)', fontVariantNumeric: 'tabular-nums'
+                      }}>{s.value}</span>
                     </div>
                   ))}
                 </div>
@@ -268,7 +312,12 @@ async function handleAcceptPlan() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {aiPlan && view === 'today' && (
               <div className="fade-in">
-                <AiPlanCard plan={aiPlan} tasks={tasks} onAccept={handleAcceptPlan} onReject={() => setAiPlan(null)} />
+                <AiPlanCard
+                  plan={aiPlan}
+                  tasks={tasks}
+                  onAccept={handleAcceptPlan}
+                  onReject={() => setAiPlan(null)}
+                />
               </div>
             )}
             {loading
