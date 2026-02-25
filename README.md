@@ -44,12 +44,50 @@ You can accept the AI plan (tasks reorder and display their assigned time slots)
 
 **The issue:** GPT-4o-mini was expected to return pure JSON; however, in a significant number of cases, responses were wrapped in markdown code fences (` ```json `) or prefixed with explanatory text. This caused `JSON.parse()` to throw, breaking the optimization flow.
 
-**How I solved it — in three steps:**
+**How I solved it - in three steps:**
 
-**1. Prompt engineering first.** I made the system prompt explicit and repeated:
+### 1. Prompt engineering first
 
+I crafted an explicit system prompt that leaves no room for interpretation:
+```typescript
+const systemPrompt = `You are a productivity assistant that schedules tasks for a single user's workday.
+You must respond ONLY with valid JSON — no explanation, no markdown, no extra text.
+The JSON must exactly match this schema:
+{
+  "ordered_task_ids": ["id1", "id2"],
+  "slots":[
+    { "taskId": "id1", "start": "2026-02-25T09:00:00", "end": "2026-02-25T10:00:00" }
+  ],
+  "rationale": "One or two sentences explaining the priority logic."
+}
+Rules:
+- Use ISO 8601 format for start/end times
+- Working hours are 09:00 to 18:00 with a 30min lunch break at 13:00
+- Current time is ${currentTimeStr}. Schedule tasks starting from now, never in the past
+- If current time is past 18:00, return empty slots and mention in rationale
+- Prioritize tasks with earlier deadlines
+- Do not schedule overlapping slots
+- Skip tasks that don't fit and mention them in rationale`
 ```
-You must respond ONLY with valid JSON - no explanation, no markdown, no extra text.
+**Before this prompt** (wrapped in markdown - caused parsing to fail):
+
+```text
+Here's your optimized schedule:
+{
+  "ordered_task_ids": [...],
+  "slots": [...]
+}
+```
+
+**After this prompt** (clean JSON - parses successfully):
+```json
+{
+  "ordered_task_ids": ["54b55c32-5457-430f-9a43-3c074b6fe50e"],
+  "slots": [
+    { "taskId": "54b55c32-5457-430f-9a43-3c074b6fe50e", "start": "2026-02-25T16:15:00", "end": "2026-02-25T18:00:00" }
+  ],
+  "rationale": "The only task that can be scheduled within the remaining working hours is 'Write test files'..."
+}
 ```
 
 This alone dropped the failure rate significantly, but not to zero.
@@ -83,7 +121,7 @@ The key insight was treating LLM output like any untrusted external API - parse 
 
 **1. Clone the repo**
 ```bash
-git clone https://github.com/yourusername/ai-focus-planner.git
+git clone https://github.com/PaulSburlea/ai-focus-planner
 cd ai-focus-planner
 ```
 
