@@ -82,6 +82,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'No tasks provided' })
   }
 
+  const invalidTask = (tasks as TaskInput[]).find(
+    t => !t.id || !t.title || !t.estimate_minutes || t.estimate_minutes < 1
+  )
+  if (invalidTask) {
+    return res.status(400).json({ error: 'Invalid task data' })
+  }
+
   try {
     const { system, user: userPrompt } = buildPrompt(tasks as TaskInput[])
 
