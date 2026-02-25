@@ -112,7 +112,7 @@ export default function App() {
   // ── Stats ──
   const today = new Date(); today.setHours(0, 0, 0, 0)
 
-  const activeTasks    = tasks.filter(t => !t.completed)
+  const activeTasks = tasks.filter(t => !t.completed)
   const todayActiveTasks = activeTasks.filter(t => {
     if (!t.deadline) return false
     const d = new Date(t.deadline)
@@ -124,17 +124,13 @@ export default function App() {
   const todayHours   = (todayMinutes / 60).toFixed(1)
 
   // ── Filtrare după view ──
-  // Today: tasks active (necompletate) cu deadline azi/viitor sau fara deadline
-  // Past: tasks cu deadline trecut + TOATE taskurile completate
   const filteredTasks = tasks.filter(t => {
     if (view === 'past') {
-      // deadline in trecut SAU task completat
       if (t.completed) return true
       if (!t.deadline) return false
       const d = new Date(t.deadline); d.setHours(0, 0, 0, 0)
       return d < today
     } else {
-      // view === 'today': doar active, deadline azi/viitor sau fara deadline
       if (t.completed) return false
       if (!t.deadline) return true
       const d = new Date(t.deadline); d.setHours(0, 0, 0, 0)
@@ -167,46 +163,58 @@ export default function App() {
       }}>
         <div style={{
           maxWidth: 1320, margin: '0 auto',
-          padding: '0 32px', height: 62,
+          padding: '0 24px', height: 62,
           display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', gap: 16
+          justifyContent: 'space-between', gap: 8
         }}>
 
           {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
             <div style={{
               width: 28, height: 28, borderRadius: 8,
               background: 'var(--accent-dim)', border: '1px solid var(--accent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, color: 'var(--accent)'
+              fontSize: 13, color: 'var(--accent)', flexShrink: 0
             }}>✦</div>
-            <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+            <span className="header-logo-text" style={{
+              fontSize: 15, fontWeight: 700,
+              color: 'var(--text)', letterSpacing: '-0.02em'
+            }}>
               Focus Planner
             </span>
           </div>
 
           {/* Right side */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
 
-            {/* Today's summary pill */}
+            {/* Stats pill — dispare sub 680px */}
             <div className="header-stats" style={{
-              display: 'flex', alignItems: 'center', gap: 0,
+              display: 'flex', alignItems: 'center',
               background: 'var(--surface-2)', border: '1px solid var(--border)',
-              borderRadius: 10, overflow: 'hidden', marginRight: 4
+              borderRadius: 10, overflow: 'hidden', flexShrink: 0
             }}>
-              <div style={{ padding: '0 16px', height: 34, display: 'flex', alignItems: 'center', gap: 6, borderRight: '1px solid var(--border)' }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{todayActiveTasks.length}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>tasks today</span>
+              <div style={{
+                padding: '0 13px', height: 34,
+                display: 'flex', alignItems: 'center', gap: 5,
+                borderRight: '1px solid var(--border)'
+              }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+                  {todayActiveTasks.length}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>today</span>
               </div>
-              <div style={{ padding: '0 16px', height: 34, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{todayHours}h</span>
+              <div style={{ padding: '0 13px', height: 34, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+                  {todayHours}h
+                </span>
                 <span style={{ fontSize: 11, color: 'var(--text-3)' }}>scheduled</span>
               </div>
             </div>
 
-            {/* Theme toggle — same size as avatar (34×34) */}
+            {/* Theme toggle — dispare sub 560px */}
             <button
               onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+              className="header-theme-btn"
               style={{
                 width: 34, height: 34, borderRadius: 10,
                 background: 'var(--surface-2)', border: '1px solid var(--border)',
@@ -214,34 +222,49 @@ export default function App() {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 15, transition: 'all 0.15s', flexShrink: 0
               }}
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
             >
               {theme === 'dark' ? '☀️' : '🌙'}
             </button>
 
-            {/* Profile */}
+            {/* Profile — mereu vizibil */}
             <ProfileMenu session={session} tasks={tasks} onSignOut={handleSignOut} />
 
-            <div style={{ width: 1, height: 20, background: 'var(--border)', margin: '0 4px' }} />
+            {/* Divider — dispare sub 560px */}
+            <div className="header-divider" style={{
+              width: 1, height: 20,
+              background: 'var(--border)', flexShrink: 0
+            }} />
 
-            {/* Optimize CTA */}
+            {/* Optimize — mereu vizibil */}
             <button
               onClick={handleOptimize}
               disabled={optimizing}
               className="btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 18px', height: 34, fontSize: 13 }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '0 14px', height: 34, fontSize: 13,
+                flexShrink: 0
+              }}
             >
-              {optimizing
-                ? <><span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>◌</span><span>Thinking...</span></>
-                : <><span>✦</span><span>Optimize my day</span></>
-              }
+              {optimizing ? (
+                <>
+                  <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', fontSize: 12 }}>◌</span>
+                  <span className="btn-optimize-text">Thinking...</span>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontSize: 12 }}>✦</span>
+                  <span className="btn-optimize-text">Optimize my day</span>
+                </>
+              )}
             </button>
           </div>
         </div>
       </header>
 
       {/* ── Main ── */}
-      <main style={{ maxWidth: 1320, margin: '0 auto', padding: '28px 32px' }}>
+      <main style={{ maxWidth: 1320, margin: '0 auto', padding: '28px 24px' }}>
 
         {/* Tabs */}
         <div style={{
@@ -257,7 +280,7 @@ export default function App() {
               key={tab.key}
               onClick={() => setView(tab.key)}
               style={{
-                padding: '7px 18px', borderRadius: 9,
+                padding: '7px 16px', borderRadius: 9,
                 fontSize: 13, fontWeight: 500,
                 border: 'none', cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -283,7 +306,10 @@ export default function App() {
 
             {view === 'past' && (
               <div className="card" style={{ padding: '20px 24px' }}>
-                <p style={{ fontSize: 11, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>
+                <p style={{
+                  fontSize: 11, color: 'var(--text-2)',
+                  textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16
+                }}>
                   Past summary
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

@@ -286,9 +286,26 @@ textarea.input-field { resize: none; line-height: 1.6; }
   .form-sticky { position: static !important; }
 }
 
+/* Header responsive — colapsare treptata */
+
+/* sub 680px: ascunde stats pill */
+@media (max-width: 680px) {
+  .header-stats { display: none !important; }
+}
+
+/* sub 560px: ascunde theme toggle si divider */
+@media (max-width: 560px) {
+  .header-theme-btn { display: none !important; }
+  .header-divider   { display: none !important; }
+}
+
+/* sub 420px: ascunde textul din butonul Optimize, ramane doar iconita ✦ */
+@media (max-width: 420px) {
+  .btn-optimize-text  { display: none !important; }
+  .header-logo-text   { display: none !important; }
+}
+
 @media (max-width: 600px) {
-  .header-stats { display: none; }
-  .header-inner { padding: 0 16px !important; }
   .main-wrap { padding: 20px 16px !important; }
 }
 

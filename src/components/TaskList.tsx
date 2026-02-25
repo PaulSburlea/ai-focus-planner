@@ -229,22 +229,49 @@ function TaskModal({ task, onClose, onSave, onDelete, onComplete }: {
 
               {/* Actions */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <button
-                  onClick={handleComplete}
-                  disabled={completing}
-                  style={{
-                    width: '100%', padding: 11,
-                    background: '#16a34a', color: '#fff',
-                    border: 'none', borderRadius: 10,
-                    fontFamily: 'DM Sans, sans-serif',
-                    fontWeight: 600, fontSize: 13.5, cursor: 'pointer',
-                    opacity: completing ? 0.5 : 1,
-                    transition: 'opacity 0.15s, transform 0.1s',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7
-                  }}
-                >
-                  {completing ? 'Marking...' : <><span>✓</span> Mark as done</>}
-                </button>
+                {task.completed ? (
+                  /* ── Task completat → Reopen ── */
+                  <button
+                    onClick={async () => { await onSave(task.id, { completed: false }); onClose() }}
+                    style={{
+                      width: '100%', padding: 11,
+                      background: 'var(--surface-2)', color: 'var(--text)',
+                      border: '1px solid var(--border)', borderRadius: 10,
+                      fontFamily: 'DM Sans, sans-serif',
+                      fontWeight: 600, fontSize: 13.5, cursor: 'pointer',
+                      transition: 'all 0.15s',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = 'var(--border-2)'
+                      e.currentTarget.style.background = 'var(--surface-3)'
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'var(--border)'
+                      e.currentTarget.style.background = 'var(--surface-2)'
+                    }}
+                  >
+                    <span>↩</span> Reopen task
+                  </button>
+                ) : (
+                  /* ── Task activ → Mark as done ── */
+                  <button
+                    onClick={handleComplete}
+                    disabled={completing}
+                    style={{
+                      width: '100%', padding: 11,
+                      background: '#16a34a', color: '#fff',
+                      border: 'none', borderRadius: 10,
+                      fontFamily: 'DM Sans, sans-serif',
+                      fontWeight: 600, fontSize: 13.5, cursor: 'pointer',
+                      opacity: completing ? 0.5 : 1,
+                      transition: 'opacity 0.15s, transform 0.1s',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7
+                    }}
+                  >
+                    {completing ? 'Marking...' : <><span>✓</span> Mark as done</>}
+                  </button>
+                )}
 
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button onClick={() => setEditing(true)} className="btn-ghost" style={{ flex: 1 }}>
