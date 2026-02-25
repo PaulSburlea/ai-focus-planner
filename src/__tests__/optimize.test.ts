@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { safeParseJson, buildPrompt } from './optimize'
+import { safeParseJson, buildPrompt } from '../../api/optimize'
 
 // Mock OpenAI
 vi.mock('openai', () => ({

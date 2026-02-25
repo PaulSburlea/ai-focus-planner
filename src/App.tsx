@@ -19,7 +19,9 @@ export default function App() {
   const [loading,    setLoading]  = useState(false)
   const [optimizing, setOpt]      = useState(false)
   const [toast,      setToast]    = useState<Toast | null>(null)
-  const [theme,      setTheme]    = useState<Theme>('dark')
+const [theme, setTheme] = useState<Theme>(() => {
+  return (localStorage.getItem('theme') as Theme) || 'dark'
+})
   const [view,       setView]     = useState<'today' | 'past'>('today')
 
   useEffect(() => {
@@ -35,7 +37,10 @@ export default function App() {
   }, [])
 
   useEffect(() => { if (session) loadTasks() }, [session])
-  useEffect(() => { document.documentElement.setAttribute('data-theme', theme) }, [theme])
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('theme', theme)
+  }, [theme])
 
   function showToast(message: string, type: 'success' | 'error' = 'success') {
     setToast({ message, type })
@@ -76,13 +81,22 @@ export default function App() {
     if (!aiPlan || !tasks.length) return
     try {
       const plannedIds = new Set(aiPlan.ordered_task_ids)
-      await Promise.all(
-        tasks.filter(t => plannedIds.has(t.id)).map(t => updateTask(t.id, { ai_plan: aiPlan }))
-      )
+
       const reordered = [
-        ...aiPlan.ordered_task_ids.map(id => tasks.find(t => t.id === id)).filter(Boolean),
+        ...aiPlan.ordered_task_ids
+          .map(id => tasks.find(t => t.id === id))
+          .filter(Boolean),
         ...tasks.filter(t => !plannedIds.has(t.id))
       ] as Task[]
+
+      // Salvează sort_order în DB pentru fiecare task
+      await Promise.all(
+        reordered.map((t, i) => updateTask(t.id, {
+          sort_order: i,
+          ...(plannedIds.has(t.id) ? { ai_plan: aiPlan } : {})
+        }))
+      )
+
       setTasks(reordered)
       showToast('Plan applied!')
       setAiPlan(null)

@@ -7,6 +7,7 @@ export interface Task {
   notes: string | null
   ai_plan: AiPlan | null
   completed: boolean
+  sort_order: number
   created_at: string
 }
 
