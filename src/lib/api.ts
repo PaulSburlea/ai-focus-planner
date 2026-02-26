@@ -104,7 +104,11 @@ export async function optimizeDay(tasks: Task[]): Promise<AiPlan> {
       // Pass the Supabase JWT to the serverless function for verification
       'Authorization': `Bearer ${session?.access_token ?? ''}`
     },
-    body: JSON.stringify({ tasks })
+    body: JSON.stringify({ 
+      tasks,
+      currentTime: new Date().toISOString(),
+      timezoneOffset: new Date().getTimezoneOffset()
+    })
   })
 
   if (!res.ok) throw new Error('Optimize failed')
